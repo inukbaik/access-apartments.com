@@ -31,10 +31,13 @@ plans, verifies, re-plans and adapts.
 
 ## 2. Problem and pitch
 
-**Problem:** Google Maps has no wheelchair-aware walking routes. It only flags
-wheelchair-accessible transit. A student who uses a wheelchair cannot tell whether the "5-minute
-walk" to class has stairs, a steep grade, a missing curb ramp, or an entrance that is only
-reachable by steps.
+**Problem:** Google Maps' wheelchair option for walking is a stair-free toggle that only works
+"wherever we have data available", and Google warns it "may not always reflect real-world
+conditions." It doesn't consider slope, curb height or surface, doesn't explain its choices, and
+doesn't learn from users. As far as we have found, it isn't exposed in Google's developer Routes
+API **(unverified)**. A student who uses a wheelchair still cannot tell whether the "5-minute
+walk" to class has a steep grade, a missing curb ramp, or an entrance that is only reachable by
+steps.
 
 **Pitch (Education framing):** an AI mobility agent that gets students with disabilities to
 class, labs and events. It plans routes within their limits, explains every decision, admits
@@ -51,10 +54,12 @@ slope" is instantly relatable, and we can check the route on foot on Saturday.
 
 | Existing | What it does | Gap |
 |---|---|---|
-| Google Maps | Wheelchair-accessible transit flag | No sidewalk, slope or curb awareness |
+| Google Maps (app) | Stair-free walking toggle and wheelchair-accessible transit, where data exists | No slope, curb or surface limits; no explanations; no developer API found |
 | AccessMap (UW, OpenSidewalks) | Slope-aware sidewalk routing in select cities | Static data, no reasoning, limited coverage |
 | Wheelmap | Crowdsourced place accessibility | Places only, no routing |
-| OpenRouteService `wheelchair` profile | Routing by surface, incline, kerb and width | Relies on OSM tags, which are sparse; silent when data is missing |
+| OpenRouteService `wheelchair` profile | Free API. `profile_params.restrictions`: `maximum_incline` (3/6/10/15%), `maximum_sloped_kerb` (0.03/0.06/0.1 m), `surface_type`, `smoothness_type`, `track_type`, `minimum_width`; `avoid_features: ["steps"]` | Relies on OSM tags, which are sparse; silent when data is missing; treats uphill and downhill the same. Spell it `kerb`, not `curb`. |
+| OpenTripPlanner | Wheelchair settings: max slope, stairs penalty | Transit-focused; you self-host it |
+| Valhalla | Pedestrian costing with wheelchair-style options (no steps, slope limit) | You self-host it, or use a hosted provider |
 
 **Our differentiator:** a **verify-and-explain agent**. OSM accessibility tags are incomplete, so
 the agent checks segments with more evidence (elevation, street imagery), marks unknowns honestly
