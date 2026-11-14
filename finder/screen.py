@@ -32,32 +32,26 @@ def passes_all(r):
     return not r.get("error") and all(c["status"] == "pass" for c in r["checks"])
 
 
-def main():
-    ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("--lat", type=float, required=True)
-    ap.add_argument("--lon", type=float, required=True)
-    ap.add_argument("--radius-km", type=float, default=2)
-    ap.add_argument("--limit", type=int, default=15)
-    ap.add_argument("--index", default="data/models_index.csv")
-    ap.add_argument("--refresh", action="store_true", help="ignore the cache and re-fetch")
-    ap.add_argument("--out-dir", default="out/finder")
-    args = ap.parse_args()
-
-    pool = min(args.limit * 4, 60)
-    cands = load_candidates(args.index, args.lat, args.lon, args.radius_km, pool)
-    print(f"{len(cands)} candidates within {args.radius_km} km (pool {pool})")
-    os.makedirs(args.out_dir, exist_ok=True)
+def screen_area(lat, lon, radius_km, limit, refresh=False, index="data/models_index.csv",
+                out_dir="out/finder", log=print, full=False):
+    """Candidates -> fetch -> checks -> group into buildings -> rank. Returns the ranked buildings
+    (best unit's record plus "units", all units best first), at most `limit`.
+    With full=True returns (ranked, n_records_written) instead. `log(msg)` gets progress lines."""
+    pool = min(limit * 4, 60)
+    cands = load_candidates(index, lat, lon, radius_km, pool)
+    log(f"{len(cands)} candidates within {radius_km} km (pool {pool})")
+    os.makedirs(out_dir, exist_ok=True)
 
     results = []
     for i, c in enumerate(cands, 1):
-        print(f"[{i}/{len(cands)}] fetching {c['sid']} {str(c['name'])[:40]}")
+        log(f"[{i}/{len(cands)}] fetching {c['sid']} {str(c['name'])[:40]}")
         rec = {"candidate": c, "checks": [], "error": None}
         try:
-            rec["checks"] = run_checks(fetch_model(c["sid"], args.refresh))
+            rec["checks"] = run_checks(fetch_model(c["sid"], refresh))
         except FetchError as e:
             rec["error"] = str(e)
-            print(f"  ERROR: {e}")
-        with open(os.path.join(args.out_dir, f"{c['sid']}.json"), "w") as f:
+            log(f"  ERROR: {e}")
+        with open(os.path.join(out_dir, f"{c['sid']}.json"), "w") as f:
             json.dump(rec, f, indent=2)
         results.append(rec)
 
@@ -71,10 +65,13 @@ def main():
         units = sorted((by_id[id(c)] for c in g), key=sort_key)
         ranked.append({**units[0], "units": units})
     ranked.sort(key=sort_key)
-    ranked = ranked[:args.limit]
-    with open(os.path.join(args.out_dir, "ranked.json"), "w") as f:
+    ranked = ranked[:limit]
+    with open(os.path.join(out_dir, "ranked.json"), "w") as f:
         json.dump(ranked, f, indent=2)
+    return (ranked, len(results)) if full else ranked
 
+
+def print_table(ranked):
     print(f"\n{'#':>2}  {'name':<32} {'km':>5} {'units':>7}  {'hallway':<16} {'door':<18} {'turning':<16}")
     for n, r in enumerate(ranked, 1):
         c = r["candidate"]
@@ -88,7 +85,23 @@ def main():
         print(f"{n:>2}  {name:<32} {c['dist_km']:>5.2f} {u:>7}  {h:<16} {d:<18} {t:<16}")
     npass = sum(passes_all(r) for r in ranked)
     print(f"\n{npass} of {len(ranked)} buildings pass all checks")
-    print(f"Wrote {len(results)} files + ranked.json to {args.out_dir}/")
+
+
+def main():
+    ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    ap.add_argument("--lat", type=float, required=True)
+    ap.add_argument("--lon", type=float, required=True)
+    ap.add_argument("--radius-km", type=float, default=2)
+    ap.add_argument("--limit", type=int, default=15)
+    ap.add_argument("--index", default="data/models_index.csv")
+    ap.add_argument("--refresh", action="store_true", help="ignore the cache and re-fetch")
+    ap.add_argument("--out-dir", default="out/finder")
+    args = ap.parse_args()
+
+    ranked, n = screen_area(args.lat, args.lon, args.radius_km, args.limit, args.refresh,
+                            args.index, args.out_dir, full=True)
+    print_table(ranked)
+    print(f"Wrote {n} files + ranked.json to {args.out_dir}/")
 
 
 if __name__ == "__main__":
