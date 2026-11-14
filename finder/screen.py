@@ -5,6 +5,7 @@ import argparse
 import json
 import os
 
+from finder.buildings import group_buildings
 from finder.candidates import load_candidates
 from finder.checks import run_checks
 from finder.matterport import FetchError, fetch_model
@@ -25,11 +26,6 @@ def sort_key(r):
     fails = sum(c["status"] == "fail" for c in ch)
     nodata = sum(c["reason"] == "no data" for c in ch)
     return (0, fails, nodata, r["candidate"]["dist_km"])
-
-
-def building_key(c):
-    pid = str(c.get("costar_property_id") or "").strip()
-    return pid if pid else (round(c["lat"], 4), round(c["lon"], 4))
 
 
 def passes_all(r):
@@ -68,10 +64,12 @@ def main():
     results.sort(key=sort_key)
 
     # One listing per building: best-ranked unit first, the rest kept as units.
-    buildings = {}
-    for r in results:
-        buildings.setdefault(building_key(r["candidate"]), []).append(r)
-    ranked = [{**units[0], "units": units} for units in buildings.values()]
+    by_id = {id(r["candidate"]): r for r in results}
+    groups = group_buildings([r["candidate"] for r in results])
+    ranked = []
+    for g in groups:
+        units = sorted((by_id[id(c)] for c in g), key=sort_key)
+        ranked.append({**units[0], "units": units})
     ranked.sort(key=sort_key)
     ranked = ranked[:args.limit]
     with open(os.path.join(args.out_dir, "ranked.json"), "w") as f:

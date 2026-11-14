@@ -3,6 +3,7 @@ numpy
 pillow
 python-dotenv
 matplotlib
+usaddress
 # localization test only
 torch
 transformers
