@@ -150,13 +150,20 @@ Scripts and how to rerun them: [scripts/README.md](scripts/README.md).
 | Door widths in the API | **Yes**, `Edge.openings` (sparse) |
 | Venue scan reachable | **Yes** |
 | Listings have hallway / bathroom sizes | **Yes.** In a 25-model sample, 18 of 21 hallways ≥ 36 in (min 27.5 in); 15 of 51 bathrooms fit a 60 in circle; one door measured 0.66 m (26 in), under 32 in |
-| Localization (photo → right spot) | **Rough pass**, judged by eye: glasses ~4/6, phone ~5/7 (pass = 3/5). Phone and glasses pick the same positions. Distinctive spots (stairwells, atrium, glass corridors) match; plain spots (window and sign, restroom door, elevator lobby) fail. Margins mostly < 0.02, so confidence is low |
+| Localization (photo → right spot) | **Pass.** Judged by eye. Photos taken where the scan has data: glasses 4/4, phone ~5/5 (pass = 3/5). The misses (window with wall sign, elevator lobby, likely the restroom door) were taken in areas with **no scan data**. Phone and glasses pick the same positions |
+| Bigger model (`dinov2-base`) | **No gain** over `dinov2-small`; slower. Keep small |
+| Furniture-removed panoramas (`--defurnished`) | **No gain**; the tested areas had little furniture. Don't use |
 
-**Still to run:** `--embed-model facebook/dinov2-base` and `--defurnished` on the same photos.
+Two problems remain:
+- **Low confidence.** Top-1 vs top-2 margins are mostly < 0.02, and look-alike spots (atrium
+  corridors, stairwell doors on every floor) can flip the answer.
+- **Photos from unscanned areas still get a (wrong) answer.** Top scores overlap: scanned spots
+  0.72–0.91, unscanned 0.69–0.81 (small model), so a score cutoff alone isn't enough.
 
-**Decision (pending those runs):** if localization holds, build both parts; demo Part B only on
-a route through distinctive spots. If it gets worse, drop the glasses and put everything into
-Part A.
+**Decision (Sat Nov 14): GO on the glasses (Part B).** Mitigations, built into the localization
+service: vote across 3–5 frames, prefer positions next to the last known one on the walking
+graph, and answer **"unknown"** ("I'm not sure where you are") when confidence is low. Keep the
+demo route inside the scanned area.
 
 ---
 
@@ -169,8 +176,9 @@ Part A.
 - [ ] Agent loop that reasons over checks, marks unknowns, ranks listings
 - [ ] Evidence report: floor plan with flagged spots, panorama crops, aerial crop
 
-### Phase 2: Indoor localization (Part B), if Phase 0 holds
-- [ ] Localization service: frame in → position + heading + confidence out
+### Phase 2: Indoor localization (Part B), go
+- [ ] Localization service: frames in → position + heading + confidence out, "unknown" when unsure
+- [ ] Multi-frame voting + walking-graph prior
 - [ ] Walking graph between scan positions, elevator-only floor changes
 - [ ] Turn-by-turn instructions from position + heading
 - [ ] Pick the demo route through spots that match reliably
@@ -194,7 +202,7 @@ Part A.
 | Risk | Fallback |
 |---|---|
 | Door openings sparse | Report "door width unknown"; later: vision on panoramas or point cloud gaps |
-| Localization unreliable (furniture, crowds, plain walls) | Bigger model, defurnished panoramas, demo route through distinctive spots; else drop Part B |
+| Localization unsure or user outside the scanned area | Multi-frame voting, graph prior, answer "unknown"; demo route stays inside the scan through distinctive spots |
 | "Commercial" set is mostly apartments | Lean into it: accessible housing is the use case |
 | CoStar join fails | Matterport + Vexcel alone still combine two layers |
 | Glasses battery or heat | Stream only while navigating; charge between runs |

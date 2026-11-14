@@ -11,8 +11,8 @@ Update this file when you pick up or finish something. `git pull --rebase` first
 | Lane | Owner | Folder | Status |
 |---|---|---|---|
 | A. Finder (listing screener) | Inuk | `finder/` | Starting |
-| B. Localization + routing | Shane | `localize/` | Phase 0 follow-up runs |
-| C. Glasses app | _unassigned_ | `glasses-app/` | Waiting on the go / no go for B |
+| B. Localization + routing | Shane | `localize/` | Go; building the service |
+| C. Glasses app | _unassigned_ | `glasses-app/` | Ready to start (B is a go) |
 | D. Demo, video, Devpost | _unassigned_ | `docs/` | Not started |
 
 ## A. Finder (Inuk)
@@ -32,15 +32,15 @@ Goal: given an area and a user's needs, return listings ranked by accessibility,
 
 ## B. Localization + routing (Shane)
 
-1. [ ] Rerun with `--embed-model facebook/dinov2-base` and with `--defurnished`; compare.
-2. [ ] Go / no go on the glasses, recorded in PROJECT_CONTEXT.md §6.
-3. [ ] If go: localization service (frame → position, heading, confidence) in `localize/`.
+1. [x] Bigger model and defurnished runs: no gain. **Go** on the glasses (PROJECT_CONTEXT.md §6).
+2. [ ] Localization service in `localize/`: frames → position, heading, confidence; "unknown" when unsure.
+3. [ ] Multi-frame voting + walking-graph prior.
 4. [ ] Walking graph between scan positions; turn-by-turn text.
-5. [ ] Pick the demo route through spots that match reliably.
+5. [ ] Pick the demo route inside the scanned area, through spots that match reliably.
 
 ## C. Glasses app (unassigned)
 
-Only if B is a go. Phone app streams frames from the glasses to the localization service and
+B is a go. Phone app streams frames from the glasses to the localization service and
 speaks the answer. Start from Meta's sample app; see [docs/GLASSES_SDK.md](docs/GLASSES_SDK.md).
 
 ## D. Demo, video, Devpost (unassigned)
