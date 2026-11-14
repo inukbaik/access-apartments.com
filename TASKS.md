@@ -33,15 +33,15 @@ Goal: given an area and a user's needs, return listings ranked by accessibility,
 ## B. Localization + routing (Shane)
 
 1. [x] Bigger model and defurnished runs: no gain. **Go** on the glasses (PROJECT_CONTEXT.md §6).
-2. [ ] Localization service in `localize/`: frames → position, heading, confidence; "unknown" when unsure.
-3. [ ] Multi-frame voting + walking-graph prior.
+2. [x] Localization service in `localize/` (HTTP + CLI): frames → position, floor, heading; "unknown" when unsure.
+3. [~] Multi-frame voting + walking-graph prior: built, **untested** (need frame bursts; see localize/README.md).
 4. [ ] Walking graph between scan positions; turn-by-turn text.
 5. [ ] Pick the demo route inside the scanned area, through spots that match reliably.
 
 ## C. Glasses app (unassigned)
 
 B is a go. Phone app streams frames from the glasses to the localization service and
-speaks the answer. Start from Meta's sample app; see [docs/GLASSES_SDK.md](docs/GLASSES_SDK.md).
+speaks the answer. The HTTP API is in [localize/README.md](localize/README.md). Start from Meta's sample app; see [docs/GLASSES_SDK.md](docs/GLASSES_SDK.md).
 
 ## D. Demo, video, Devpost (unassigned)
 
