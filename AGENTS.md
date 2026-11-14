@@ -31,7 +31,8 @@ If these files disagree, the newest approved design in `docs/designs/` wins, the
 - Build from an approved design when one exists. If the code has to differ from the design, say
   so in your summary so the design can be updated.
 - Only build what was asked. Stretch features go on a branch (`feat/<name>`), not `main`.
-- When data is missing, the product says **"unknown"**. Never present a guess as fact.
+- When data is missing or a measurement is implausible, the check **fails**, and the product says
+  why ("fail: no data" / "fail: bad measurement"). Never present a guess as fact.
 - Prefer simple, readable code. Every external call (APIs, models) fails loudly with a clear
   message, never silently.
 

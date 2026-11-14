@@ -1,6 +1,6 @@
 # HackPrinceton Fall 2026: Accessible Spaces
 
-**The plan.** Last updated Sat Nov 14, afternoon. Who is doing what right now: [TASKS.md](TASKS.md).
+**The plan.** Last updated Sat Nov 14, evening. Who is doing what right now: [TASKS.md](TASKS.md).
 Why this idea, and what we rejected: [docs/DISCUSSION_LOG.md](docs/DISCUSSION_LOG.md).
 
 **Hard deadline:** Devpost submission by **8:00 AM Sunday, Nov 15** (public GitHub repo).
@@ -16,7 +16,7 @@ actually live in a place, and once they arrive, unfamiliar buildings are hard to
 - **Part A, before you go (the finder):** an agent screens real Houston and LA listings for
   wheelchair accessibility using CoStar's data: hallway widths, door widths, bathroom turning
   space from the Matterport scans, plus entrance steps and parking from Vexcel aerial imagery.
-  It ranks listings, shows its evidence, and says **"unknown"** when data is missing.
+  It ranks listings, shows its evidence, and **fails** a check (saying "no data") when data is missing.
 - **Part B, when you're there (the glasses):** Meta Ray-Ban glasses work out where you're
   standing by matching the camera view to the building's Matterport scan, then speak step-free
   directions. Demoed live in Rabinowitz Hall, the venue, which has a Matterport scan.
@@ -74,7 +74,7 @@ Keys: `/costar-keys` in the CoStar Discord → `.env` (see `.env.example`). Data
 - **Data gaps:** many rooms are unlabelled or `Void`; about a third of sampled models had no
   hallway or bathroom. Hallway "width" is the room's bounding box, not a measured clear width.
   Door openings are sparse (Rabinowitz Hall: only 9 doorways mapped across 3 floors). A missing
-  door means **unknown**, not absent.
+  door fails the check ("no data"); it does not mean there is no door.
 - Interiors were scanned for listings; **exteriors are often missing**.
 
 ### Vexcel
@@ -106,8 +106,11 @@ Keys: `/costar-keys` in the CoStar Discord → `.env` (see `.env.example`). Data
 | Accessible parking | Marked stall + access aisle | Vexcel ortho + vision model | Not tried |
 | Building age | Pre 1990 predates ADA | CoStar record (year built) | Not tried |
 
-The agent says **"unknown"** when data is missing and attaches evidence (floor plan with flagged
-spots, panorama crops, aerial crop).
+A check passes only when it was measured and meets the threshold. Missing data is a fail labelled
+"no data"; an implausible value (e.g. a "doorway" under 20 in) is a fail labelled "bad measurement".
+The agent attaches evidence (floor plan with flagged spots, panorama crops, aerial crop).
+
+Decision (Sat Nov 14): uncertainty means failure. A check passes only when measured and meeting the threshold; this protects users from being sent to a place they can't use.
 
 ---
 
@@ -120,7 +123,7 @@ User needs (e.g. power chair, roll-in shower, no steps) + area
   → per candidate: Matterport rooms + door openings (+ panoramas)
                    Vexcel ortho/oblique around the address
                    CoStar record (optional)
-  → agent scores checks, flags problems, marks unknowns
+  → agent scores checks, flags problems, fails checks with no data
   → ranked list + evidence report per listing
 ```
 
@@ -163,10 +166,10 @@ Part A.
 ## 7. Phases
 
 ### Phase 1: Finder core (Part A), in progress
-- [ ] Candidate search near a point from `data/models_index.csv`
-- [ ] Pull rooms + door openings; hallway, door and turning-space checks with "unknown"
+- [x] Candidate search near a point from `data/models_index.csv`
+- [x] Pull rooms + door openings; hallway, door and turning-space checks (missing data = fail, "no data")
 - [ ] Vexcel ortho/oblique per address; vision check for entrance steps and accessible parking
-- [ ] Agent loop that reasons over checks, marks unknowns, ranks listings
+- [ ] Agent loop that reasons over checks, fails checks with no data, ranks listings
 - [ ] Evidence report: floor plan with flagged spots, panorama crops, aerial crop
 
 ### Phase 2: Indoor localization (Part B), if Phase 0 holds
@@ -193,7 +196,7 @@ Part A.
 
 | Risk | Fallback |
 |---|---|
-| Door openings sparse | Report "door width unknown"; later: vision on panoramas or point cloud gaps |
+| Door openings sparse | Fail the check, labelled "no data"; later: vision on panoramas or point cloud gaps |
 | Localization unreliable (furniture, crowds, plain walls) | Bigger model, defurnished panoramas, demo route through distinctive spots; else drop Part B |
 | "Commercial" set is mostly apartments | Lean into it: accessible housing is the use case |
 | CoStar join fails | Matterport + Vexcel alone still combine two layers |

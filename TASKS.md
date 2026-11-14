@@ -18,17 +18,17 @@ Update this file when you pick up or finish something. `git pull --rebase` first
 ## A. Finder (Inuk)
 
 Goal: given an area and a user's needs, return listings ranked by accessibility, with evidence and
-"unknown" where data is missing. Needed whatever happens with the glasses.
+a fail (with the reason) where data is missing. Needed whatever happens with the glasses.
 
-1. [ ] Candidate search: models near a lat/lon from `data/models_index.csv` (Houston / LA).
-2. [ ] Per model: rooms + door openings via `scripts/mp_common.graph()`. The queries in
+1. [x] Candidate search: models near a lat/lon from `data/models_index.csv` (Houston / LA).
+2. [x] Per model: rooms + door openings via `scripts/mp_common.graph()`. The queries in
    `scripts/phase0_check.py` (steps 2 and 5) already work; reuse them.
-3. [ ] Checks: hallway ≥ 36 in, door ≥ 32 in, bathroom narrow side ≥ 60 in. Missing data =
-   "unknown". Thresholds are in PROJECT_CONTEXT.md §4.
-4. [ ] Output: JSON per listing (checks, values, evidence ids), then a simple ranked view.
+3. [x] Checks: hallway ≥ 36 in, door ≥ 32 in, bathroom narrow side ≥ 60 in. Uncertainty means
+   failure: missing data = fail ("no data"), implausible value = fail ("bad measurement"). Thresholds are in PROJECT_CONTEXT.md §4.
+4. [x] Output: JSON per listing (checks, values, evidence ids), then a simple ranked view.
 5. [ ] Then: Vexcel entrance/parking check, agent loop, evidence report (PROJECT_CONTEXT.md §7).
 
-**Done when:** one command prints a ranked list for an LA point with pass / fail / unknown per check.
+**Done when:** one command prints a ranked list for an LA point with pass / fail per check and the reason for each fail (measured, no data, bad measurement).
 
 ## B. Localization + routing (Shane)
 
