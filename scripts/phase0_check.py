@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Phase 0 data checks for the accessible spaces project.
 
-Answers the go / no go questions from docs/PROJECT_CONTEXT.md:
+Answers the go / no go questions from PROJECT_CONTEXT.md:
   1. Does our key work, and how many models does it see?
   2. Does the wall graph expose door openings (so we can get door widths)?
   3. Can our key read the Rabinowitz Hall venue scan?
@@ -9,8 +9,8 @@ Answers the go / no go questions from docs/PROJECT_CONTEXT.md:
   5. On a sample of models: hallway widths, bathroom turning space, and which edge types show up.
 
 Usage:
-  python scripts/phase0_check.py --index models_index.csv
-  python scripts/phase0_check.py --index models_index.csv --sample 40 --venue P3S6VUTP3qB
+  python scripts/phase0_check.py
+  python scripts/phase0_check.py --index data/models_index.csv --sample 40 --venue P3S6VUTP3qB
 
 Writes a full JSON report to out/phase0_report.json.
 """
@@ -143,7 +143,7 @@ def to_int(v):
 def check_index(report, path):
     section(f"4. models_index.csv ({path})")
     if not path or not os.path.exists(path):
-        print("Index not found. Download models_index.csv from the hackathon site and pass --index.")
+        print("Index not found. Download models_index.csv from the hackathon site into data/ (see data/README.md).")
         report["index"] = None
         return []
     with open(path, newline="", encoding="utf-8") as f:
@@ -298,7 +298,7 @@ def verdict(report):
 
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("--index", default="models_index.csv", help="path to models_index.csv")
+    ap.add_argument("--index", default="data/models_index.csv", help="path to models_index.csv")
     ap.add_argument("--sample", type=int, default=25, help="models to sample for step 5")
     ap.add_argument("--venue", default="P3S6VUTP3qB", help="Matterport id of the venue scan")
     ap.add_argument("--seed", type=int, default=7)

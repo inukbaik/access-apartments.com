@@ -8,16 +8,18 @@ decisions in design documents, not here (see "EGM" below for why).
 
 | File | What it is |
 |---|---|
-| `PROJECT_CONTEXT.md` | Team working notes: idea, data, tracks, phases, risks. |
-| `PROPOSAL.md` | The current project proposal (being written; **will land Sat Nov 14 morning**). |
+| `PROJECT_CONTEXT.md` | **The plan**: idea, data facts, accessibility checks, architecture, phases, risks, pitch. |
+| `TASKS.md` | Who is doing what right now, and which folders each lane touches. |
 | `docs/designs/` | **Approved designs.** Build from these. Index: `docs/designs/SITEMAP.md`. |
 | `egm/` | EGM drafts and review reports (working files, committed so the team can see them). |
 | `legacy-archive/` | Superseded proposals. Background only; don't build from them. |
-| `HACKATHON_CONTEXT.md` | Notes on the Ray-Ban Meta glasses SDK (setup, gotchas, reusable code). |
-| `F26 Onsite Hacker Packet - Google Docs.pdf` | Official rules, tracks, judging. |
+| `docs/DISCUSSION_LOG.md` | Why we picked this idea and which ideas we rejected. |
+| `docs/GLASSES_SDK.md` | Notes on the Ray-Ban Meta glasses SDK (setup, gotchas, reusable code). |
+| `docs/hacker-packet.pdf` | Official rules, tracks, judging. |
+| `data/README.md` | How to download the sponsor data locally (never committed). |
 
 If these files disagree, the newest approved design in `docs/designs/` wins, then
-`PROPOSAL.md`, then `PROJECT_CONTEXT.md`. If something is still unclear, ask the human; don't guess.
+`PROJECT_CONTEXT.md`. If something is still unclear, ask the human; don't guess.
 
 ## Hard constraints
 
@@ -32,6 +34,15 @@ If these files disagree, the newest approved design in `docs/designs/` wins, the
 - When data is missing, the product says **"unknown"**. Never present a guess as fact.
 - Prefer simple, readable code. Every external call (APIs, models) fails loudly with a clear
   message, never silently.
+
+## Layout and conventions
+
+- `scripts/`: Phase 0 tests and shared helpers (`mp_common.py` has the Matterport `graph()` call).
+  `finder/`: Part A (listing screener). `localize/`: Part B (glasses localization and routing).
+- Python 3, one `.venv` at the repo root, `pip install -r scripts/requirements.txt`.
+  **Run everything from the repo root.**
+- Downloads and sponsor data go in `data/`, generated outputs in `out/`, caches in `cache/`.
+  All three are git-ignored.
 
 ## Secrets
 
@@ -52,6 +63,6 @@ EGM artifact directory: egm/
   a row in `docs/designs/SITEMAP.md`.
 - Each approved design ends with a short **Review history** section: stages run, findings
   accepted and what changed, findings rejected and why, date.
-- How to run EGM (Claude Code and Codex): see `EGM_MANUAL.md`.
+- How to run EGM (Claude Code and Codex): see `docs/EGM_MANUAL.md`.
 - Codex reviewers may still receive this file (EGM issue #237), which is another reason to keep
   design assumptions out of it.

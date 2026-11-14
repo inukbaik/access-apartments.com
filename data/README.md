@@ -9,6 +9,8 @@ same paths below so scripts work on everyone's machine.
 ```
 data/
 ├── README.md                     ← this file (the only tracked file)
+├── models_index.csv              ← every model with lat/lon, ids, room counts (geo search)
+├── photos/{phone,glasses}/       ← query photos for the localization test
 ├── costar/                       ← CoStar real estate data kit (~430 MB)
 │   ├── index.md                  ← start here: datasets, joins, field docs
 │   ├── commercial-properties.csv     PropertyId → MatterportModelId, address
@@ -36,7 +38,10 @@ data/
    ```
    If the zip contains a top-level folder, move its contents up so the layout matches the
    layout above.
-3. **Venue panoramas.** Needs `MATTERPORT_API_KEY` and `MATTERPORT_API_TOKEN` in `.env`:
+3. **Model index.** Download `models_index.csv` from the track quickstart page
+   (https://beta-app.matterport.com/2026-princeton-hackathon/quickstart, next to the notebook)
+   and save it as `data/models_index.csv`.
+4. **Venue panoramas.** Needs `MATTERPORT_API_KEY` and `MATTERPORT_API_TOKEN` in `.env`:
    ```sh
    set -a; source .env; set +a
    python3 scripts/fetch_venue_panos.py            # defaults: P3S6VUTP3qB, 2k
@@ -46,7 +51,7 @@ data/
 ## Check
 
 ```sh
-ls data/costar/index.md data/venue/P3S6VUTP3qB/panos.json
+ls data/models_index.csv data/costar/index.md data/venue/P3S6VUTP3qB/panos.json
 ```
 
 ## Rules

@@ -4,14 +4,14 @@
 Builds an image index from the venue's Matterport panoramas (8 views per scan position,
 45 degrees apart), embeds everything with DINOv2, and matches your photos against it.
 
-Pass criterion (docs/PROJECT_CONTEXT.md, Phase 0): 3 of 5 photos match the right spot.
+Pass criterion (PROJECT_CONTEXT.md, Phase 0): 3 of 5 photos match the right spot.
 You judge "right" by looking at the side by side images it saves.
 
 Usage:
-  # take ~5 photos around the hall (phone or glasses), put them in photos/
-  python scripts/localize_test.py --photos photos/
-  python scripts/localize_test.py --photos photos/ --defurnished      # also index the no furniture view
-  python scripts/localize_test.py --photos photos/ --ref-dir shots/   # fallback: screenshots of the public tour
+  # take ~5 photos around the hall (phone or glasses), put them in data/photos/<camera>/
+  python scripts/localize_test.py --photos data/photos/phone/
+  python scripts/localize_test.py --photos data/photos/phone/ --defurnished      # also index the no furniture view
+  python scripts/localize_test.py --photos data/photos/phone/ --ref-dir shots/   # fallback: screenshots of the public tour
 
 Outputs (out/localize/):
   <photo>_matches.jpg   your photo next to its top matches

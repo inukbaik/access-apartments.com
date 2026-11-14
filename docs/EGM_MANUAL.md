@@ -53,16 +53,16 @@ Start a new session afterwards. In Codex, **pick the EGM skill from the skill pi
 Shown with the Claude Code prefix. In Codex, choose the same skill name from the picker.
 
 ### `/egm:egm-draft`: write the design, one section at a time
-Use it when the direction is decided (Saturday morning, once `PROPOSAL.md` lands).
+Use it when the direction is decided (it is: see `PROJECT_CONTEXT.md`).
 
 1. Claude reads the context you point it to.
 2. It drafts section by section and stops after each for **approve / change**:
    Overview & Problem → Technical Plan → Alternatives → Implementation plan (files + checks).
 3. Output: `egm/design_draft.md`. When approved it moves to `docs/designs/<name>.md`.
 
-**Type (adjust once the proposal is final):**
+**Type:**
 ```
-/egm:egm-draft Design the MVP described in PROPOSAL.md (use PROJECT_CONTEXT.md for data and
+/egm:egm-draft Design the MVP described in PROJECT_CONTEXT.md (use it for data and
 API details). Scope: only what the 2-minute demo needs. The implementation plan must split work
 into pieces that 3-4 people can build in parallel, each with a way to check it works.
 ```
@@ -72,7 +72,7 @@ Give feedback in chat, or edit `egm/design_draft.md` directly / add `<!-- note -
 ```
 /egm:egm-review egm/design_draft.md
 ```
-Claude asks for **Goldfish context** (files reviewers may read). Good picks: `PROPOSAL.md`,
+Claude asks for **Goldfish context** (files reviewers may read). Good picks: `docs/DISCUSSION_LOG.md`,
 `PROJECT_CONTEXT.md`, and any code the design points to. **Never pass `.env` or keys.**
 
 Then pick a mode:
@@ -111,7 +111,7 @@ hard-coded values, a different approach). For each one, update the design or the
 Output: `egm/YYYY-MM-DD_DRIFT_REPORT.md`.
 
 ### Skip during the hackathon
-- `/egm:egm-brainstorm`: the team is already settling the direction in `PROPOSAL.md`.
+- `/egm:egm-brainstorm`: the team is already settled the direction in `PROJECT_CONTEXT.md`.
 - `/egm:egm-bootstrap`: per-folder READMEs; not worth it for a 24-hour repo.
 
 ---
@@ -120,7 +120,7 @@ Output: `egm/YYYY-MM-DD_DRIFT_REPORT.md`.
 
 | When | Who | Command | Time box |
 |---|---|---|---|
-| Sat AM, after `PROPOSAL.md` lands | One person (the "elephant") | `/egm:egm-draft` | ~30 min |
+| Sat, once a lane needs a design | One person (the "elephant") | `/egm:egm-draft` | ~30 min |
 | Right after | Same person | `/egm:egm-review egm/design_draft.md`, **option 2** | ~30 min |
 | Then | Team | Approve → move to `docs/designs/`, add to SITEMAP, write Review history | 10 min |
 | Build | Everyone | Each teammate's agent builds its piece **from the approved design** | — |

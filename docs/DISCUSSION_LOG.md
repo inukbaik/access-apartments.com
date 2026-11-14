@@ -1,6 +1,6 @@
 # Discussion log: how we got to this idea
 
-A summary of the brainstorming session (Fri Nov 13, 10 PM to Sat Nov 14, 3 AM) that led to the current plan, so teammates who weren't there have the reasoning. The current plan itself lives in [`PROJECT_CONTEXT.md`](PROJECT_CONTEXT.md).
+A summary of the brainstorming session (Fri Nov 13, 10 PM to Sat Nov 14, 3 AM) that led to the current plan, so teammates who weren't there have the reasoning. The current plan itself lives in [`PROJECT_CONTEXT.md`](../PROJECT_CONTEXT.md).
 
 ---
 
@@ -90,6 +90,6 @@ Google Maps' wheelchair routes and entrance info, and Wheelmap's crowdsourced ra
 
 ## 9. Where things stand
 
-- The plan, phases and risks are in [`PROJECT_CONTEXT.md`](PROJECT_CONTEXT.md).
+- The plan, phases and risks are in [`PROJECT_CONTEXT.md`](../PROJECT_CONTEXT.md).
 - Test scripts are in [`../scripts/`](../scripts/README.md): `phase0_check.py` (data questions) and `localize_test.py` (photo → scan position).
 - **Next decision:** after Phase 0. If localization passes, build both halves; if it fails, drop the glasses and go all in on the housing finder.

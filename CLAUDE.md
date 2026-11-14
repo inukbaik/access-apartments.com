@@ -11,7 +11,7 @@ EGM artifact directory: egm/
 - Commands use the `/egm:` prefix, e.g. `/egm:egm-draft`. Only the human can start them.
 - EGM reviewer agents run without `CLAUDE.md`. Anything a reviewer must know belongs in the
   design document or in files it links, not here.
-- Before a review, `PROPOSAL.md` and `PROJECT_CONTEXT.md` are good Goldfish context. Never pass
+- Before a review, `PROJECT_CONTEXT.md` and `docs/DISCUSSION_LOG.md` are good Goldfish context. Never pass
   `.env` or any file containing keys.
 
 ## Working style

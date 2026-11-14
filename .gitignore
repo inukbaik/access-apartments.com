@@ -33,3 +33,10 @@ DerivedData/
 # Only data/README.md (the setup guide) is tracked.
 data/*
 !data/README.md
+
+# Local outputs and downloads (scripts run from the repo root)
+out/
+cache/
+mp_out/
+photos*/
+models_index.csv

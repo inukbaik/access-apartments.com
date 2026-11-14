@@ -1,9 +1,0 @@
-.env
-out/
-cache/
-mp_out/
-photos/
-__pycache__/
-*.pyc
-models_index.csv
-.venv/
