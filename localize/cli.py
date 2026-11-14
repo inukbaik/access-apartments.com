@@ -36,7 +36,10 @@ def main():
 
     embedder = lt.Embedder(a.embed_model)
     index = load_or_build(a.model, a.embed_model, embedder=embedder)
-    loc = Locator(index, embedder, Thresholds(min_score=a.min_score, min_margin=a.min_margin))
+    # one photo at a time can't meet the 2-frame rule, so drop it outside --sequence
+    th = Thresholds(min_score=a.min_score, min_margin=a.min_margin,
+                    min_frames=Thresholds.min_frames if a.sequence else 1)
+    loc = Locator(index, embedder, th)
 
     for n, path in enumerate(sorted(a.photos)):
         session = "walk" if a.sequence else f"photo{n}"

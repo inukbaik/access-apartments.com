@@ -11,6 +11,7 @@ python -m localize.index                              # once: download panoramas
 python -m localize.cli data/photos/glasses/*.jpg      # try photos, each on its own
 python -m localize.cli --sequence frames/*.jpg        # try consecutive frames as one walk
 python -m localize.server --token <secret> --save-frames   # HTTP service on port 8765
+python -m localize.replay data/frames/<session> --compare  # rerun a saved walk with the current rules
 ```
 
 ## Phone test (no glasses needed)
@@ -40,8 +41,9 @@ old) and favors spots next to its last confident answer.
 
 ```json
 {
-  "status": "ok",                 // or "unknown": then never tell the user a position as fact
-  "reason": "score 0.69 < 0.75",  // only when unknown
+  "status": "ok",                 // "held": plain view, this is the last "ok" answer (< 5 s old)
+                                  // "unknown": never tell the user a position as fact
+  "reason": "score 0.69 < 0.75",  // only when held or unknown
   "frames": 3, "score": 0.838, "margin": 0.061, "agreement": 1.0,
   "floor_margin": 0.09,
   "best_guess": {
@@ -58,13 +60,34 @@ old) and favors spots next to its last confident answer.
 
 1. Each frame is compared with 8 views (45° apart) at each of the 66 scan positions (DINOv2-small).
 2. Scores are averaged over the session's recent frames; spots within 2 walking steps of the last
-   confident answer get a small bonus.
-3. **"ok"** needs all of: top score ≥ 0.75, a lead ≥ 0.01 over the best *different* spot
-   (> 4 m away in x/y), and ≥ 60% of recent frames agreeing. Otherwise **"unknown"**.
-4. If the only close rival is the same spot on the other floor, the answer is "ok" with
+   confident answer get a small bonus. A frame that scores < 0.65 everywhere (floor, blank wall,
+   blur) doesn't vote.
+3. **"ok"** needs all of: ≥ 2 frames, top score ≥ 0.75, a lead ≥ 0.02 over the best *different*
+   spot (> 4 m away in x/y), and ≥ 60% of recent frames agreeing.
+4. Otherwise **"held"** if the last "ok" is under 5 s old (turning toward a plain wall shouldn't
+   lose you; the phone page stays quiet), else **"unknown"**.
+5. If the only close rival is the same spot on the other floor, the answer is "ok" with
    `floor: "unknown"`. The app can send `floor=` once it knows the floor.
 
-## Calibration (Phase 0 photos, one photo at a time)
+## Calibration: first phone walk (Sat Nov 14, 189 frames, Rabinowitz Hall Floors 2–3)
+
+Correctness judged by eye (each frame next to its matched view); there is no surveyed ground truth.
+
+| Rules | ok | held | unknown | Wrong "ok"/"held" |
+|---|---|---|---|---|
+| Live run (1 frame enough, lead ≥ 0.01, no hold) | 101 | – | 88 | ~8 |
+| Current rules (`python -m localize.replay … --compare`) | 89 | 39 | 61 | 3 |
+
+- Most old "unknown"s were plain views while standing at a known spot; "held" now covers them.
+- Fixed: first frame after a reset picking the right x/y on the wrong floor (spot 61 vs. 13);
+  frosted-glass and empty-corridor views with a thin lead.
+- Still wrong: a glass stairwell door on Floor 3 that has no scan position matches the atrium
+  stairs (spot 45). Thresholds can't fix places the scan doesn't cover: keep the demo route on
+  scanned spots.
+- Solid spots for the demo route: elevator 32, atrium 35/23, glass door 21, hallways 65, 16,
+  15/14, wood-panel hallway 31 → 25.
+
+## Calibration (Phase 0 photos, one photo at a time, before the multi-frame rules)
 
 | Set | Correct "ok" | Correct "unknown" (off-scan) | Cautious "unknown" (right spot, close rival) | Wrong "ok" |
 |---|---|---|---|---|
@@ -72,9 +95,7 @@ old) and favors spots next to its last confident answer.
 | Phone (7) | 1 | 2 (window, restroom door) | 4 | 0 |
 
 - **One frame can't fully separate off-scan from on-scan**: the elevator lobby scores higher
-  than some real matches. Multi-frame voting should help, but it's **untested**: we only have
-  single photos from different spots. Next: record 3–5 frame bursts (turning your head) at a few
-  scanned spots and one unscanned spot, then run `--sequence` on each burst.
+  than some real matches. The phone walk above is the multi-frame test.
 - The scan has **no Floor 1 positions**: only Floors 2 (36) and 3 (30).
 - Some spots look alike across the building (e.g. positions 20/44 and 19/65 are the same x/y on
   Floors 2 and 3).
@@ -89,3 +110,4 @@ old) and favors spots next to its last confident answer.
 | `server.py` | HTTP service + phone test page (standard library only) |
 | `static/index.html` | Phone test page: camera → `/localize` → speech |
 | `cli.py` | Try photos without a phone |
+| `replay.py` | Rerun a saved walk (`data/frames/<session>`) with other cutoffs |

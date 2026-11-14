@@ -14,7 +14,7 @@
   video, img { width: 100%; aspect-ratio: 1; object-fit: cover; border-radius: 8px; background: var(--card); }
   .cap { font-size: 12px; color: var(--muted); text-align: center; }
   #status { font-size: 22px; font-weight: 600; margin: 12px 0 4px; }
-  #status.ok { color: var(--ok); } #status.unknown { color: var(--unk); }
+  #status.ok, #status.held { color: var(--ok); } #status.unknown { color: var(--unk); }
   #detail { font-size: 13px; color: var(--muted); white-space: pre-wrap; }
   button, select { font: inherit; padding: 12px; border-radius: 8px; border: 1px solid var(--muted); background: var(--card); color: var(--fg); }
   .controls { display: flex; flex-wrap: wrap; gap: 8px; margin: 12px 0; }
@@ -59,7 +59,7 @@ function say(text) {
 }
 
 function describe(r) {
-  if (r.status !== "ok") return "Not sure where you are";
+  if (r.status === "unknown") return "Not sure where you are";
   const g = r.best_guess;
   const floor = g.floor === "unknown" ? "floor unknown" : g.floor;
   const room = g.room && g.room !== "unknown" ? g.room.toLowerCase() : "";
@@ -86,8 +86,9 @@ async function tick() {
       (r.reason ? `\n${r.reason}` : "") +
       (r.floor_candidates ? `\nfloor could be ${r.floor_candidates.join(" or ")}` : "");
     $("match").src = `/view/${g.pano_id}/${g.heading_deg}.jpg?` + q();
-    $("matchcap").textContent = `${r.status === "ok" ? "best match" : "best guess (unsure)"}: spot ${g.label}, ${g.floor}, heading ${g.heading_deg}`;
-    say(describe(r));
+    $("matchcap").textContent = `${{ok: "best match", held: "last confident spot"}[r.status] || "best guess (unsure)"}: spot ${g.label}, ${g.floor}, heading ${g.heading_deg}`;
+    if (r.status === "held") $("status").textContent = "Still: " + describe(r);
+    else say(describe(r));  // "held" = plain view, last answer kept: stay quiet
   } catch (e) {
     $("status").className = "unknown";
     $("status").textContent = "Error";

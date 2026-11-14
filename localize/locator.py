@@ -4,8 +4,11 @@ Each frame is compared with every scan position's 8 horizon views (DINOv2, cosin
 A position's score is its best view. Then, per session (one phone):
   1. Average the scores over the last WINDOW frames (multi-frame voting).
   2. Add PRIOR_BONUS to positions within 2 walking edges of the last confident answer.
-  3. Answer "ok" only if the top score, the margin over the best position that is NOT nearby,
-     and the agreement between frames all pass; otherwise answer "unknown".
+  3. Answer "ok" only if there are at least 2 frames and the top score, the margin over the best
+     position that is NOT nearby, and the agreement between frames all pass.
+  4. Otherwise answer "held" (the last confident answer, if it is under HOLD_S old: bland views
+     while turning on the spot shouldn't lose you) or "unknown".
+Frames whose own best score is under min_frame_score (floor, blank wall, blur) don't vote.
 
 Headings are relative to the scan's skybox faces (0/45/.../315), not compass directions.
 """
@@ -22,14 +25,17 @@ WINDOW = 4  # frames voted together
 MAX_AGE_S = 10.0  # frames older than this drop out of the vote
 PRIOR_S = 30.0  # how long the last confident answer keeps helping
 PRIOR_BONUS = 0.02
+HOLD_S = 5.0  # how long "held" may repeat the last confident answer
 
 
 @dataclass
 class Thresholds:
-    # Calibrated on the Phase 0 photos (see localize/README.md); retune with more photos.
+    # Calibrated on the Phase 0 photos and the first phone walk (see localize/README.md).
     min_score: float = 0.75
-    min_margin: float = 0.01
+    min_margin: float = 0.02
     min_agree: float = 0.6
+    min_frames: int = 2
+    min_frame_score: float = 0.65  # a frame scoring below this everywhere is uninformative
 
 
 def square_crop(img):
@@ -77,7 +83,10 @@ class Locator:
         now = time.time() if now is None else now
         s = self.sessions.setdefault(session, _Session())
         scores, headings = self.score_image(img)
-        s.frames.append((now, scores, headings))
+        skipped = bool(scores.max() < self.th.min_frame_score and
+                       any(now - f[0] <= MAX_AGE_S for f in s.frames))
+        if not skipped:
+            s.frames.append((now, scores, headings))
         frames = [f for f in s.frames if now - f[0] <= MAX_AGE_S]
 
         combined = np.mean([f[1] for f in frames], axis=0)
@@ -103,6 +112,10 @@ class Locator:
         floor_known = floor_margin is None or floor_margin >= self.th.min_margin
 
         reasons = []
+        if skipped:
+            reasons.append(f"frame too plain (best {scores.max():.3f} < {self.th.min_frame_score}), not counted")
+        if len(frames) < self.th.min_frames:
+            reasons.append(f"{len(frames)} frame(s) < {self.th.min_frames}")
         if score < self.th.min_score:
             reasons.append(f"score {score:.3f} < {self.th.min_score}")
         if margin < self.th.min_margin:
@@ -110,9 +123,12 @@ class Locator:
         if len(frames) > 1 and agree < self.th.min_agree:
             reasons.append(f"frames agree {agree:.0%} < {self.th.min_agree:.0%}")
 
+        status = "ok" if not reasons else "unknown"
+        if reasons and s.last and now - s.last[0] <= HOLD_S:
+            status, top, floor_known = "held", s.last[1], True  # keep saying where they last were
         p = self.index.panos[top]
         result = {
-            "status": "unknown" if reasons else "ok",
+            "status": status,
             "frames": len(frames),
             "score": round(score, 3),
             "margin": round(margin, 3),
@@ -127,7 +143,7 @@ class Locator:
                 "heading_deg": int(headings[top]),
             },
         }
-        if not floor_known:
+        if not floor_known and status != "held":
             result["floor_candidates"] = sorted({floors[i] for i in [top] + other_floor})
         if reasons:
             result["reason"] = "; ".join(reasons)

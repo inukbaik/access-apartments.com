@@ -34,7 +34,7 @@ Goal: given an area and a user's needs, return listings ranked by accessibility,
 
 1. [x] Bigger model and defurnished runs: no gain. **Go** on the glasses (PROJECT_CONTEXT.md §6).
 2. [x] Localization service in `localize/` (HTTP + CLI): frames → position, floor, heading; "unknown" when unsure.
-3. [~] Multi-frame voting + walking-graph prior: built, **untested** (need frame bursts; see localize/README.md).
+3. [x] Multi-frame voting + walking-graph prior + "held": tested on a 189-frame phone walk (localize/README.md).
 4. [ ] Walking graph between scan positions; turn-by-turn text.
 5. [ ] Pick the demo route inside the scanned area, through spots that match reliably.
 
