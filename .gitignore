@@ -28,3 +28,8 @@ local.properties
 *.apk
 Pods/
 DerivedData/
+
+# Sponsor data (CoStar kit, Matterport/Vexcel downloads); never commit.
+# Only data/README.md (the setup guide) is tracked.
+data/*
+!data/README.md
