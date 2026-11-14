@@ -71,19 +71,23 @@ def screen_area(lat, lon, radius_km, limit, refresh=False, index="data/models_in
     return (ranked, len(results)) if full else ranked
 
 
-def print_table(ranked):
-    print(f"\n{'#':>2}  {'name':<32} {'km':>5} {'units':>7}  {'hallway':<16} {'door':<18} {'turning':<16}")
+def print_table(ranked, labels=None, passes=None):
+    """labels: optional row labels (e.g. B6) in place of 1, 2, 3...; passes: building -> bool (default passes_all)."""
+    passes = passes or passes_all
+    w = max([2] + [len(str(x)) for x in labels or []])
+    print(f"\n{'#':>{w}}  {'name':<32} {'km':>5} {'units':>7}  {'hallway':<16} {'door':<18} {'turning':<16}")
     for n, r in enumerate(ranked, 1):
+        n = labels[n - 1] if labels else n
         c = r["candidate"]
         name = str(c["name"])[:32]
         extra = len(r["units"]) - 1
         u = f"+{extra}" if extra else ""
         if r["error"]:
-            print(f"{n:>2}  {name:<32} {c['dist_km']:>5.2f} {u:>7}  ERROR: {r['error'][:60]}")
+            print(f"{n:>{w}}  {name:<32} {c['dist_km']:>5.2f} {u:>7}  ERROR: {r['error'][:60]}")
             continue
         h, d, t = (cell(x) for x in r["checks"])
-        print(f"{n:>2}  {name:<32} {c['dist_km']:>5.2f} {u:>7}  {h:<16} {d:<18} {t:<16}")
-    npass = sum(passes_all(r) for r in ranked)
+        print(f"{n:>{w}}  {name:<32} {c['dist_km']:>5.2f} {u:>7}  {h:<16} {d:<18} {t:<16}")
+    npass = sum(bool(passes(r)) for r in ranked)
     print(f"\n{npass} of {len(ranked)} buildings pass all checks")
 
 
