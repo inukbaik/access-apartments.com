@@ -10,11 +10,21 @@ lane B. Background and Phase 0 results: [PROJECT_CONTEXT.md](../PROJECT_CONTEXT.
 python -m localize.index                              # once: download panoramas, build the index (~1 min)
 python -m localize.cli data/photos/glasses/*.jpg      # try photos, each on its own
 python -m localize.cli --sequence frames/*.jpg        # try consecutive frames as one walk
-python -m localize.server                             # HTTP service on port 8765
+python -m localize.server --token <secret> --save-frames   # HTTP service on port 8765
 ```
 
-The server prints its LAN address. The phone and the laptop must be on the same network (e.g.
-the phone's hotspot).
+## Phone test (no glasses needed)
+
+The phone does **not** need to be near the laptop; it needs the public HTTPS link. Phones only
+allow the camera on https pages.
+
+1. On the laptop: `python -m localize.server --token <secret> --save-frames`
+2. In a second terminal: `cloudflared tunnel --url http://localhost:8765` (`brew install cloudflared`).
+   It prints a `https://….trycloudflare.com` link that changes every run.
+3. In Rabinowitz Hall (Floors 2–3), open `<link>/?token=<secret>` on the phone, tap **Start**.
+   It sends a frame every second, shows the matched scan view next to the camera and speaks the
+   answer. Tap **New walk** when you move somewhere new.
+4. Frames and results land in `data/frames/<session>/` (git-ignored) for tuning the rules.
 
 ## HTTP API (for the glasses app, lane C)
 
@@ -76,5 +86,6 @@ old) and favors spots next to its last confident answer.
 | `index.py` | Downloads panoramas (parallel; re-queries expired links), embeds views, caches to `cache/localize/` |
 | `graph.py` | Walking graph from Matterport `anchor.neighbors`, same floor, ≤ 8 m per edge |
 | `locator.py` | Scoring, voting, graph prior, "unknown" rules |
-| `server.py` | HTTP service (standard library only) |
+| `server.py` | HTTP service + phone test page (standard library only) |
+| `static/index.html` | Phone test page: camera → `/localize` → speech |
 | `cli.py` | Try photos without a phone |

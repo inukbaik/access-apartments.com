@@ -1,0 +1,116 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Where am I</title>
+<style>
+  :root { --bg: #fff; --fg: #111; --muted: #666; --ok: #0a7d32; --unk: #b25e00; --card: #f2f2f2; }
+  @media (prefers-color-scheme: dark) { :root { --bg: #111; --fg: #eee; --muted: #999; --ok: #4cc16f; --unk: #f0a441; --card: #222; } }
+  body { margin: 0; padding: 16px; font: 16px/1.4 system-ui, sans-serif; background: var(--bg); color: var(--fg); }
+  h1 { font-size: 20px; margin: 0 0 12px; }
+  .row { display: flex; gap: 8px; }
+  .row > * { flex: 1; min-width: 0; }
+  video, img { width: 100%; aspect-ratio: 1; object-fit: cover; border-radius: 8px; background: var(--card); }
+  .cap { font-size: 12px; color: var(--muted); text-align: center; }
+  #status { font-size: 22px; font-weight: 600; margin: 12px 0 4px; }
+  #status.ok { color: var(--ok); } #status.unknown { color: var(--unk); }
+  #detail { font-size: 13px; color: var(--muted); white-space: pre-wrap; }
+  button, select { font: inherit; padding: 12px; border-radius: 8px; border: 1px solid var(--muted); background: var(--card); color: var(--fg); }
+  .controls { display: flex; flex-wrap: wrap; gap: 8px; margin: 12px 0; }
+  .controls > * { flex: 1 1 40%; }
+  label { font-size: 14px; display: flex; align-items: center; gap: 6px; }
+</style>
+</head>
+<body>
+<h1>Where am I? (Rabinowitz Hall test)</h1>
+<div class="row">
+  <div><video id="cam" playsinline muted></video><div class="cap">camera</div></div>
+  <div><img id="match" alt=""><div class="cap" id="matchcap">best match</div></div>
+</div>
+<div id="status">Press Start</div>
+<div id="detail"></div>
+<div class="controls">
+  <button id="start">Start</button>
+  <button id="reset">New walk</button>
+  <select id="floor"><option value="">Floor: auto</option><option>Floor 2</option><option>Floor 3</option></select>
+  <label><input type="checkbox" id="speak" checked> Speak</label>
+</div>
+<script>
+const params = new URLSearchParams(location.search);
+const token = params.get("token") || "";
+const session = "phone-" + Math.random().toString(36).slice(2, 8);
+const $ = (id) => document.getElementById(id);
+const cam = $("cam"), canvas = document.createElement("canvas");
+let running = false, busy = false, lastSpoken = "", lastSpokenAt = 0;
+
+function q(extra = {}) {
+  const p = new URLSearchParams({ token, session, ...extra });
+  return p.toString();
+}
+
+function say(text) {
+  if (!$("speak").checked || !("speechSynthesis" in window)) return;
+  const now = Date.now();
+  if (text === lastSpoken && now - lastSpokenAt < 8000) return;  // don't repeat the same line
+  lastSpoken = text; lastSpokenAt = now;
+  speechSynthesis.cancel();
+  speechSynthesis.speak(new SpeechSynthesisUtterance(text));
+}
+
+function describe(r) {
+  if (r.status !== "ok") return "Not sure where you are";
+  const g = r.best_guess;
+  const floor = g.floor === "unknown" ? "floor unknown" : g.floor;
+  const room = g.room && g.room !== "unknown" ? g.room.toLowerCase() : "";
+  return `${floor}, ${room} near scan spot ${g.label}`.replace(/ +/g, " ");
+}
+
+async function tick() {
+  if (!running || busy || !cam.videoWidth) return;
+  busy = true;
+  const s = Math.min(cam.videoWidth, cam.videoHeight);
+  canvas.width = canvas.height = 448;
+  canvas.getContext("2d").drawImage(cam, (cam.videoWidth - s) / 2, (cam.videoHeight - s) / 2, s, s, 0, 0, 448, 448);
+  const blob = await new Promise((res) => canvas.toBlob(res, "image/jpeg", 0.85));
+  const extra = $("floor").value ? { floor: $("floor").value } : {};
+  try {
+    const resp = await fetch("/localize?" + q(extra), { method: "POST", headers: { "Content-Type": "image/jpeg" }, body: blob });
+    const r = await resp.json();
+    if (!resp.ok) throw new Error(r.error || resp.status);
+    const g = r.best_guess;
+    $("status").className = r.status;
+    $("status").textContent = describe(r);
+    $("detail").textContent =
+      `score ${r.score}  margin ${r.margin}  agree ${Math.round(r.agreement * 100)}%  frames ${r.frames}  ${r.latency_ms} ms` +
+      (r.reason ? `\n${r.reason}` : "") +
+      (r.floor_candidates ? `\nfloor could be ${r.floor_candidates.join(" or ")}` : "");
+    $("match").src = `/view/${g.pano_id}/${g.heading_deg}.jpg?` + q();
+    $("matchcap").textContent = `${r.status === "ok" ? "best match" : "best guess (unsure)"}: spot ${g.label}, ${g.floor}, heading ${g.heading_deg}`;
+    say(describe(r));
+  } catch (e) {
+    $("status").className = "unknown";
+    $("status").textContent = "Error";
+    $("detail").textContent = String(e);
+  } finally {
+    busy = false;
+  }
+}
+
+$("start").onclick = async () => {
+  if (running) { running = false; $("start").textContent = "Start"; return; }
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" }, audio: false });
+    cam.srcObject = stream; await cam.play();
+  } catch (e) {
+    $("status").textContent = "Camera blocked"; $("detail").textContent = String(e) + "\nThe page must be opened over https.";
+    return;
+  }
+  say("Starting");  // unlocks speech on iOS (needs a tap)
+  running = true; $("start").textContent = "Stop";
+};
+$("reset").onclick = async () => { await fetch("/reset?" + q(), { method: "POST" }); $("status").textContent = "New walk"; };
+setInterval(tick, 1000);
+</script>
+</body>
+</html>
