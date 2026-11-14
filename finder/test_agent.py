@@ -89,7 +89,7 @@ def run(backend, ranked=None, screen=None, **kw):
     ranked = ranked if ranked is not None else make_ranked()
     out = io.StringIO()
     with tempfile.TemporaryDirectory() as d, contextlib.redirect_stdout(out):
-        res = answer("need a roll-in shower", LAT, LON, 1.5, 10, backend, out_dir=d,
+        res = answer("need a quiet flat", LAT, LON, 1.5, 10, backend, out_dir=d,
                      screen=screen or (lambda *a: ranked), **kw)
         trace = json.load(open(os.path.join(d, "agent_trace.json")))
     return res, out.getvalue(), trace
@@ -237,7 +237,7 @@ assert EXPECT_L in out and "inspected B1, B3" in out and fb.calls == 3
 # 3b. last step: the model is told, and only finish is offered; missing finish -> fallback keeps merged results
 fb = FakeBackend([search(1.5), search(3), ("", [call("inspect_building", {"building_id": "B1"})])])
 res, out, trace = run(fb, screen=two, max_steps=3)
-assert fb.seen[0][0].startswith("need a roll-in") and "Last step" not in fb.seen[1][0]
+assert fb.seen[0][0].startswith("need a quiet") and "Last step" not in fb.seen[1][0]
 assert fb.seen[2][0] == "Last step: call finish now with your notes." and fb.seen[2][1] == ["finish"]
 assert not res.finished and "step limit of 3" in out and trace["outcome"] == "fallback"
 assert "Delta Tower" in out and "Searched: 1.5 km \u2192 3 km; inspected B1; 2 of 4 pass" in out, out

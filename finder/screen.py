@@ -71,22 +71,30 @@ def screen_area(lat, lon, radius_km, limit, refresh=False, index="data/models_in
     return (ranked, len(results)) if full else ranked
 
 
-def print_table(ranked, labels=None, passes=None):
-    """labels: optional row labels (e.g. B6) in place of 1, 2, 3...; passes: building -> bool (default passes_all)."""
+def print_table(ranked, labels=None, passes=None, extra=None):
+    """labels: optional row labels (e.g. B6) in place of 1, 2, 3...; passes: building -> bool (default passes_all).
+    extra: optional (headers, rows): one more column per extra need, rows[i] = cells of row i."""
     passes = passes or passes_all
     w = max([2] + [len(str(x)) for x in labels or []])
-    print(f"\n{'#':>{w}}  {'name':<32} {'km':>5} {'units':>7}  {'hallway':<16} {'door':<18} {'turning':<16}")
+    heads, rows = extra or ([], [])
+    ew = [max([len(h)] + [len(r[i]) for r in rows]) for i, h in enumerate(heads)]
+    tail = lambda cells: "".join(f" {c:<{x}}" for c, x in zip(cells, ew))  # noqa: E731
+    print(f"\n{'#':>{w}}  {'name':<32} {'km':>5} {'units':>7}  {'hallway':<16} {'door':<18} {'turning':<16}"
+          + tail(heads))
     for n, r in enumerate(ranked, 1):
+        n_i = n - 1
         n = labels[n - 1] if labels else n
         c = r["candidate"]
         name = str(c["name"])[:32]
-        extra = len(r["units"]) - 1
-        u = f"+{extra}" if extra else ""
+        more = len(r["units"]) - 1
+        u = f"+{more}" if more else ""
         if r["error"]:
-            print(f"{n:>{w}}  {name:<32} {c['dist_km']:>5.2f} {u:>7}  ERROR: {r['error'][:60]}")
+            print(f"{n:>{w}}  {name:<32} {c['dist_km']:>5.2f} {u:>7}  ERROR: {r['error'][:60]}"
+                  + (tail(rows[n_i]) if rows else ""))
             continue
         h, d, t = (cell(x) for x in r["checks"])
-        print(f"{n:>{w}}  {name:<32} {c['dist_km']:>5.2f} {u:>7}  {h:<16} {d:<18} {t:<16}")
+        print(f"{n:>{w}}  {name:<32} {c['dist_km']:>5.2f} {u:>7}  {h:<16} {d:<18} {t:<16}"
+              + (tail(rows[n_i]) if rows else ""))
     npass = sum(bool(passes(r)) for r in ranked)
     print(f"\n{npass} of {len(ranked)} buildings pass all checks")
 

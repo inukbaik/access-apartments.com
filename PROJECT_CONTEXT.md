@@ -112,6 +112,8 @@ The agent attaches evidence (floor plan with flagged spots, panorama crops, aeri
 
 Decision (Sat Nov 14): uncertainty means failure. A check passes only when measured and meeting the threshold; this protects users from being sent to a place they can't use.
 
+Deliberate exception (Sat Nov 14): extra needs the user names (roll-in shower, grab bars, ramp / step-free entry, elevator, wheelchair accessible) are not measured. The core checks stay strict pass/fail. Extra needs are searched in CoStar listing text and reported per building as "listing says" (with the matched phrase and source) or "information unavailable"; never as a pass or a fail. They only reorder buildings within the same measurement group (same fails and no-data count); a building with more failed core checks never moves above one with fewer.
+
 ---
 
 ## 5. Architecture

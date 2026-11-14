@@ -8,6 +8,7 @@ Verdicts (pass/fail) come only from checks.py results; the model chooses what to
 import math
 import re
 
+from finder import needs as N
 from finder.screen import screen_area, sort_key
 
 MAX_UNITS = 12  # units listed by inspect_building (token cost)
@@ -20,6 +21,9 @@ OPTIONAL_CHECKS = {}
 RADIUS_RANGE, LIMIT_RANGE, MAX_FROM_ORIGIN_KM = (0.5, 5.0), (5, 20), 10.0
 AREAS = {"LA": (33.5, 34.5, -119.0, -117.5), "Houston": (29.0, 30.5, -96.0, -94.8)}  # lat0 lat1 lon0 lon1
 FETCH_CAP = 80
+# Stoppers for extra needs (searched in CoStar listing text; never measured).
+MAX_NEEDS, MAX_ROUNDS, MAX_TERMS, TOP_N = 3, 2, 5, 10
+FOUND, UNAVAILABLE = "listing says", "information unavailable"
 
 
 def allowed_checks():
@@ -49,10 +53,102 @@ def recommended_unit(rec, required):
     return None
 
 
+class ExtraNeeds:
+    """Extra needs and their search results. The text index is injectable (tests) or loaded lazily
+    from the cache. Results: results[need][building_id] = {status, reason, evidence}."""
+
+    def __init__(self, index=None):
+        self._index = index
+        self.needs = []        # need names (catalog key, or the user's words for an unknown need)
+        self.reasons = []
+        self.rounds = {}       # need -> search rounds used
+        self.results = {}      # need -> {building_id: result}
+        self.refused = []      # refused look-alike terms, for the trace
+        self.error = ""        # why the text index could not be used, if so
+
+    @property
+    def index(self):
+        if self._index is None:
+            from finder.costar_text import load_index
+            self._index = load_index()
+        return self._index
+
+    def add(self, names, reasons=()):
+        """Add needs. Returns (names added, None) or (None, stop message) when over the limit."""
+        resolved = list(dict.fromkeys(N.resolve_need(n)[1] for n in names if str(n).strip()))
+        new = [n for n in resolved if n not in self.needs]
+        if len(self.needs) + len(new) > MAX_NEEDS:
+            return None, (f"extra-need limit: at most {MAX_NEEDS} extra needs per run; already set: "
+                          f"{', '.join(self.needs) or 'none'}. Do not add more.")
+        self.needs += new
+        self.reasons += [str(r).strip()[:150] for r in reasons if str(r).strip()]
+        return resolved, None
+
+    def found_count(self, bid):
+        return sum(self.results.get(n, {}).get(bid, {}).get("status") == FOUND for n in self.needs)
+
+    def result(self, need, bid):
+        r = self.results.get(need, {}).get(bid)
+        return r or {"status": UNAVAILABLE, "reason": "not searched", "evidence": []}
+
+    def _building(self, rec, need, key, reviewed, suggested):
+        idx = self.index
+        recs = []
+        for u in rec.get("units") or [rec]:
+            for rk in idx["models"].get(u["candidate"]["sid"], []):
+                if rk not in recs:
+                    recs.append(rk)
+        if not recs:
+            return {"status": UNAVAILABLE, "reason": "no CoStar record", "evidence": []}
+        ev = []
+        for rk in recs:
+            for m in N.find_matches(key, reviewed, suggested, idx["records"][rk]["fields"]):
+                ev.append({**m, "label": "reviewed match" if m["reviewed"] else "agent-suggested match",
+                           "record": rk})
+        ev = ev[:3]
+        if ev:
+            return {"status": FOUND, "reason": "", "evidence": ev}
+        return {"status": UNAVAILABLE, "reason": "not found in listing text", "evidence": []}
+
+    def search(self, ids, bids, need, terms):
+        """One search round (no limit checks: callers check). Returns (results by building, refused)."""
+        key, _ = N.resolve_need(need)
+        reviewed, suggested, refused = N.classify_terms(key, terms)
+        out = {}
+        for bid in bids:
+            r = self._building(ids[bid], need, key, reviewed, suggested)
+            old = self.results.setdefault(need, {}).get(bid)
+            if old and old["status"] == FOUND:  # a found stays found; add any new evidence
+                if r["status"] == FOUND:
+                    old["evidence"] = (old["evidence"] + [e for e in r["evidence"] if e not in old["evidence"]])[:3]
+                r = old
+            self.results[need][bid] = r
+            out[bid] = r
+        self.rounds[need] = self.rounds.get(need, 0) + 1
+        self.refused += refused
+        return out, refused
+
+
+def top_ids(ids, n=TOP_N):
+    """The top n building ids by the code ranking of the measurements alone (no extra-need boost)."""
+    return [b for b, _ in sorted(ids.items(), key=lambda kv: sort_key(kv[1]))][:n]
+
+
+def rank_with_extra(ids, extra=None):
+    """([records], [building ids]), best first: the measurement ranking key (error, fails, no-data
+    count), then more extra needs found, then distance. A building with more failed core checks never
+    moves above one with fewer."""
+    def key(kv):
+        k = sort_key(kv[1])
+        return k[:3] + (-(extra.found_count(kv[0]) if extra else 0),) + k[3:]
+    order = sorted(ids.items(), key=key)
+    return [r for _, r in order], [b for b, _ in order]
+
+
 class ToolContext:
     """State of one agent run. `screen` is injectable so tests need no network."""
 
-    def __init__(self, screen=None, refresh=False, fixed=None):
+    def __init__(self, screen=None, refresh=False, fixed=None, text_index=None):
         self.fixed = fixed       # (lat, lon, radius_km, limit): the user's CLI search; bounds are measured from it
         self._cands = None       # candidates fetched by the last default-screen call
         self.screen = screen or (lambda lat, lon, r, n: screen_area(lat, lon, r, n, refresh, log=self._note))
@@ -68,6 +164,7 @@ class ToolContext:
         self.req_set = False
         self.finish_ids = None
         self.notes = ""
+        self.extra = ExtraNeeds(text_index)
 
     def _note(self, msg):
         m = re.match(r"(\d+) candidates within", msg)
@@ -81,8 +178,7 @@ class ToolContext:
 
     def ranked_all(self):
         """([records best first], [building ids in the same order])."""
-        order = sorted(self.ids.items(), key=lambda kv: sort_key(kv[1]))
-        return [r for _, r in order], [b for b, _ in order]
+        return rank_with_extra(self.ids, self.extra)
 
     def passes(self, rec):
         return recommended_unit(rec, self.required) is not None
@@ -155,6 +251,56 @@ def set_requirements(ctx, checks, reasons):
     out = {"ok": True, "required": req}
     if ctx.req_note:
         out["note"] = ctx.req_note + f" (added back: {', '.join(restored)})"
+    return out
+
+
+def set_extra_needs(ctx, needs, reasons):
+    names, stop = ctx.extra.add(needs, reasons)
+    if stop:
+        return {"stopped": stop}
+    out = {}
+    for n in names:
+        key, _ = N.resolve_need(n)
+        out[n] = {"reviewed_terms": N.reviewed_terms(key) or "none (any term you give is agent-suggested)",
+                  "blocked_look_alikes": N.blocked_terms(key)}
+    return {"ok": True, "extra_needs": ctx.extra.needs, "terms": out,
+            "note": "Extra needs are searched in listing text, not measured. Then call search_listing_text."}
+
+
+def search_listing_text(ctx, need, terms, building_ids):
+    ex = ctx.extra
+    _, name = N.resolve_need(need)
+    if name not in ex.needs:
+        return {"error": f"{need!r} is not one of the extra needs; call set_extra_needs first. "
+                         f"Current: {', '.join(ex.needs) or 'none'}"}
+    if not ctx.ids:
+        return {"error": "call search_area first"}
+    keys = [str(b).strip().upper() for b in building_ids]
+    bad = [b for b in keys if b not in ctx.ids]
+    if bad or not keys:
+        return {"error": f"unknown building_id {bad}; valid: {', '.join(ctx.ids)}" if bad
+                else "building_ids is empty"}
+    if ex.rounds.get(name, 0) >= MAX_ROUNDS:
+        return {"stopped": f"search-round limit: {MAX_ROUNDS} rounds already used for '{name}'. "
+                           "Do not search it again; call finish."}
+    if len(terms) > MAX_TERMS:
+        return {"stopped": f"term limit: at most {MAX_TERMS} terms per round, you sent {len(terms)}. "
+                           "Send fewer terms."}
+    top = top_ids(ctx.ids)
+    outside = [b for b in keys if b not in top]
+    if outside:
+        return {"stopped": f"top-{TOP_N} limit: only the current top {TOP_N} buildings can be searched "
+                           f"({', '.join(top)}); not allowed: {', '.join(outside)}."}
+    res, refused = ex.search(ctx.ids, list(dict.fromkeys(keys)), name, terms)
+    out = {"need": name, "round": ex.rounds[name], "rounds_left": MAX_ROUNDS - ex.rounds[name],
+           "results": [{"building_id": b, "status": r["status"],
+                        **({"reason": r["reason"]} if r["reason"] else {}),
+                        **({"evidence": [{"matched": e["phrase"], "source": e["source"], "context": e["context"],
+                                          "label": e["label"]} for e in r["evidence"][:2]]}
+                           if r["evidence"] else {})}
+                       for b, r in res.items()]}
+    if refused:
+        out["refused_terms"] = [r["why"] for r in refused]
     return out
 
 
@@ -251,6 +397,29 @@ TOOLS = [
          "reasons": {"type": "array", "items": {"type": "string"}}},
          "required": ["checks", "reasons"]},
      "fn": set_requirements},
+    {"name": "set_extra_needs",
+     "description": "Call after set_requirements. Extra needs the user mentions that no check measures "
+                    "(roll-in shower, grab bars, ramp / step-free entry, elevator, wheelchair accessible). "
+                    "They are searched in CoStar listing text and reported as 'listing says' or "
+                    "'information unavailable'; they are never measured and never decide pass/fail. "
+                    "At most 3. needs: short names. reasons: one short string per need.",
+     "parameters": {"type": "object", "properties": {
+         "needs": {"type": "array", "items": {"type": "string"}},
+         "reasons": {"type": "array", "items": {"type": "string"}}},
+         "required": ["needs", "reasons"]},
+     "fn": set_extra_needs},
+    {"name": "search_listing_text",
+     "description": "Search CoStar listing text for one extra need in some buildings. Reviewed terms for "
+                    "known needs are always searched; terms adds your own (at most 5; matches from them are "
+                    "labelled agent-suggested; look-alikes such as 'walk-in shower' are refused). Only the "
+                    "current top 10 buildings; at most 2 rounds per need. If nothing is found, retry once "
+                    "with other terms, then stop.",
+     "parameters": {"type": "object", "properties": {
+         "need": {"type": "string"},
+         "terms": {"type": "array", "items": {"type": "string"}},
+         "building_ids": {"type": "array", "items": {"type": "string"}}},
+         "required": ["need", "terms", "building_ids"]},
+     "fn": search_listing_text},
     {"name": "search_area",
      "description": "Screen listings near a point (Los Angeles or Houston, within 10 km of the user's point). "
                     "Returns buildings ranked by measured accessibility. radius_km is clamped to 0.5-5 and "

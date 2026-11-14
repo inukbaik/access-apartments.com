@@ -23,12 +23,17 @@ def main():
     ap.add_argument("--model", default=os.environ.get("FINDER_LLM_MODEL", DEFAULT_MODEL))
     ap.add_argument("--api-key-env", default="FINDER_LLM_API_KEY",
                     help="name of the environment variable holding the API key (default FINDER_LLM_API_KEY)")
+    ap.add_argument("--rebuild-text-index", action="store_true",
+                    help="rebuild the CoStar text index (cache/finder/costar_text.json) before running")
     ap.add_argument("--no-llm", action="store_true", help="skip the agent: measurement-based results only")
     ap.add_argument("--max-steps", type=int, default=14)
     ap.add_argument("--time-budget", type=float, default=120, help="seconds for the whole agent run")
     ap.add_argument("--call-timeout", type=float, default=45, help="seconds per LLM call")
     args = ap.parse_args()
 
+    if args.rebuild_text_index:
+        from finder.costar_text import load_index
+        load_index(rebuild=True)
     backend = None
     if not args.no_llm:
         backend = OpenAICompatBackend(args.base_url, args.model, os.environ.get(args.api_key_env, ""),
