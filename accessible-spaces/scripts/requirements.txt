@@ -1,0 +1,10 @@
+requests
+numpy
+pillow
+python-dotenv
+matplotlib
+# localization test only
+torch
+transformers
+# optional: read iPhone HEIC photos directly
+pillow-heif
