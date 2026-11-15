@@ -121,7 +121,7 @@ class App:
         rows = [b for b in job.result.get("ranked") or [] if b.get("lat") is not None]
         recs = [{"candidate": {"sid": b["sid"], "lat": b["lat"], "lon": b["lon"]},
                  "units": [{"candidate": {"sid": x["sid"]}} for x in b["units"]]} for b in rows]
-        building_info.annotate(recs, *self.costar, log=job.log.append)
+        building_info.annotate(recs, *self.costar, log=job.log.append)  # type: ignore[misc]  # self.costar is a 2-tuple
         for b, rec in zip(rows, recs):
             b["building_info"] = rec["building_info"]
 
@@ -191,9 +191,9 @@ def make_handler(app):
                 except Exception as e:
                     return self._send(502, {"error": f"{type(e).__name__}: {e}"})
             if len(parts) == 3 and parts[0] == "evidence" and SID_RE.match(parts[1]) and FILE_RE.match(parts[2]):
-                f = Path(evidence.OUT) / parts[1] / parts[2]
-                if f.exists():
-                    return self._send(200, f.read_bytes(), TYPES[f.suffix])
+                f = Path(evidence.OUT) / parts[1] / parts[2]  # type: ignore[assignment]  # f is reused from an earlier with-block
+                if f.exists():  # type: ignore[attr-defined]  # same
+                    return self._send(200, f.read_bytes(), TYPES[f.suffix])  # type: ignore[attr-defined]  # same
             self._send(404, {"error": "not found"})
 
         def do_POST(self):

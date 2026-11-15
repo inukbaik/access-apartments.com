@@ -4,8 +4,12 @@ pillow
 python-dotenv
 matplotlib
 usaddress
+pydantic>=2
 # localization test only
 torch
 transformers
 # optional: read iPhone HEIC photos directly
 pillow-heif
+# dev: type checking
+mypy
+types-requests

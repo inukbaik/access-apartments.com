@@ -22,6 +22,8 @@ import re
 
 import requests
 
+from finder.schemas import ChatResponse, DataError, ModelsResponse, validate
+
 DEFAULT_BASE_URL = "http://localhost:11434/v1"
 DEFAULT_MODEL = "qwen3:8b"
 _THINK = re.compile(r"<think>.*?</think>", re.S)
@@ -54,10 +56,12 @@ class OpenAICompatBackend:
         try:
             r = requests.get(f"{self.base_url}/models", headers=self._headers(), timeout=timeout)
             r.raise_for_status()
-            ids = [m.get("id", "") for m in r.json().get("data", [])]
+            body = r.json()
+            validate(ModelsResponse, body, "LLM /models response")
+            ids = [m.get("id", "") for m in body.get("data", [])]
         except requests.RequestException as e:
             raise LLMError(f"LLM server not reachable at {self.base_url}: {type(e).__name__}") from e
-        except (ValueError, AttributeError, TypeError) as e:
+        except (ValueError, AttributeError, TypeError, DataError) as e:  # DataError is a ValueError
             raise LLMError(f"unexpected /models response from {self.base_url}") from e
         m = self.model
         if not any(i == m or i == f"{m}:latest" or i.endswith("/" + m) for i in ids):
@@ -77,7 +81,9 @@ class OpenAICompatBackend:
         if r.status_code != 200:
             raise LLMError(f"LLM HTTP {r.status_code}: {r.text[:150]}")
         try:
-            msg = r.json()["choices"][0]["message"]
+            resp = r.json()
+            validate(ChatResponse, resp, "LLM chat response")
+            msg = resp["choices"][0]["message"]
             calls = []
             for i, c in enumerate(msg.get("tool_calls") or []):
                 args = c["function"].get("arguments")

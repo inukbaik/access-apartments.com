@@ -2,6 +2,9 @@
 import json
 import os
 import sys
+from typing import Any
+
+from finder.schemas import DataError, ScreenModel, validate
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "scripts"))
 from mp_common import graph  # noqa: E402
@@ -21,19 +24,30 @@ class FetchError(Exception):
     pass
 
 
-def fetch_model(sid, refresh=False):
+def _check(model: Any, sid: str, where: str) -> None:
+    try:
+        validate(ScreenModel, model, f"Matterport model {sid} ({where})")
+    except DataError as e:
+        raise FetchError(str(e)) from None
+
+
+def fetch_model(sid: str, refresh: bool = False) -> dict[str, Any]:
     """Return the raw `model` dict. Raises FetchError with a clear message on failure."""
     path = os.path.join(CACHE_DIR, f"{sid}.json")
     if not refresh and os.path.exists(path):
         with open(path) as f:
             model = json.load(f)
+        _check(model, sid, "cache file")
         rooms = model.get("rooms") or []
         if not rooms or "boundary" in rooms[0]:  # older cache files have no room boundaries: fetch again
             return model
     data, errors = graph(QUERY, {"id": sid})
+    if data is not None and not isinstance(data, dict):
+        raise FetchError(f"{sid}: API returned unexpected data (expected an object, got {type(data).__name__})")
     model = (data or {}).get("model")
     if errors or not model:
         raise FetchError(f"{sid}: API returned no model. errors={json.dumps(errors)[:300] if errors else None}")
+    _check(model, sid, "API")
     os.makedirs(CACHE_DIR, exist_ok=True)
     with open(path, "w") as f:
         json.dump(model, f)

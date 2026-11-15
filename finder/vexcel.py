@@ -9,9 +9,12 @@ import json
 import os
 import re
 import time
+from typing import Any
 
 import requests
 from dotenv import dotenv_values
+
+from finder.schemas import DataError, HeightResult, VexResponse, validate
 
 BASE = "https://api.vexcelgroup.com/v2"
 CACHE_DIR = "cache/finder/vexcel"
@@ -73,7 +76,7 @@ def _get(d, dotted):
 
 def select_height(resp, lat, lon):
     """Pure: Vexcel property/extract JSON -> {status, height_m, photo_date, collection, reason}."""
-    out = {"status": "unavailable", "height_m": None, "photo_date": None, "collection": None, "reason": ""}
+    out: dict[str, Any] = {"status": "unavailable", "height_m": None, "photo_date": None, "collection": None, "reason": ""}
     feats = [f for f in (resp or {}).get("features") or []
              if _get(f.get("properties"), "metadata.is-ortho-image") is True]
     if not feats:
@@ -111,17 +114,29 @@ def _unavail(reason):
     return {"status": "unavailable", "height_m": None, "photo_date": None, "collection": None, "reason": reason}
 
 
-def building_height(lat, lon, refresh=False):
+def _read_cache(path: str) -> dict[str, Any] | None:
+    """A valid cached result, or None (missing, unreadable or wrong shape = cache miss)."""
+    try:
+        with open(path, encoding="utf-8") as f:
+            cached = json.load(f)
+        validate(HeightResult, cached, "cached Vexcel result")
+    except (OSError, ValueError):  # JSONDecodeError and DataError are ValueErrors
+        return None
+    return cached
+
+
+def building_height(lat: float, lon: float, refresh: bool = False) -> dict[str, Any]:
     key = _key()
     if not key:
         return _unavail("no VEXCEL_API_KEY")
     path = os.path.join(CACHE_DIR, f"{lat:.6f}_{lon:.6f}.json")
     if not refresh and os.path.exists(path):
-        with open(path, encoding="utf-8") as f:
-            return json.load(f)
+        cached = _read_cache(path)
+        if cached is not None:
+            return cached
     if _state["down"]:
         return _unavail("Vexcel unreachable")
-    params = {"wkt": f"POINT({lon:.6f} {lat:.6f})", "srid": 4326, "include": "precomputed,calculated"}
+    params: dict[str, str | int] = {"wkt": f"POINT({lon:.6f} {lat:.6f})", "srid": 4326, "include": "precomputed,calculated"}
     try:
         for attempt in (0, 1):
             _state["calls"] += 1
@@ -136,7 +151,13 @@ def building_height(lat, lon, refresh=False):
         elif r.status_code != 200:
             raise VexcelError(f"Vexcel HTTP {r.status_code}: {r.text[:120]}")
         else:
-            res = select_height(r.json(), lat, lon)
+            raw = r.json()
+            try:
+                validate(VexResponse, raw, "Vexcel property/extract")
+            except DataError as e:  # this building's data is odd; the service itself works
+                print(f"  Vexcel data for {lat:.6f},{lon:.6f} rejected: {e}")
+                return _unavail("unexpected Vexcel data")
+            res = select_height(raw, lat, lon)
     except (requests.RequestException, ValueError, VexcelError) as e:
         _state["down"] = True
         print(f"  Vexcel failed ({e}); skipping Vexcel for the rest of this run")

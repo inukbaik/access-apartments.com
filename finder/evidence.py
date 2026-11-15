@@ -27,6 +27,7 @@ from mp_common import graph  # noqa: E402
 
 from finder.checks import DOOR_MIN_IN, DOOR_PLAUSIBLE_MIN_IN, M_TO_IN, storage_edges  # noqa: E402
 from finder.matterport import FetchError, fetch_model  # noqa: E402
+from finder.schemas import DataError, EvidenceModel, validate  # noqa: E402
 
 CACHE = "cache/evidence"
 OUT = "out/evidence"
@@ -49,16 +50,29 @@ class EvidenceError(Exception):
 
 
 # ------------------------------------------------------------------ data
+def _check(model, sid, where):
+    """Shape check only: the dict itself is never changed."""
+    try:
+        validate(EvidenceModel, model, f"Matterport evidence {sid} ({where})")
+    except DataError as e:
+        raise EvidenceError(str(e)) from None
+
+
 def fetch(sid, refresh=False):
     """Geometry + panorama poses (cached JSON) and skybox faces (cached JPEGs)."""
     path = os.path.join(CACHE, f"{sid}.json")
     if not refresh and os.path.exists(path):
         with open(path) as f:
-            return json.load(f)
+            model = json.load(f)
+        _check(model, sid, "cache file")
+        return model
     data, errors = graph(QUERY, {"id": sid})
+    if data is not None and not isinstance(data, dict):
+        raise EvidenceError(f"{sid}: API returned unexpected data (expected an object, got {type(data).__name__})")
     model = (data or {}).get("model")
     if errors or not model:
         raise EvidenceError(f"{sid}: API returned no model. errors={json.dumps(errors)[:300] if errors else None}")
+    _check(model, sid, "API")
     os.makedirs(os.path.join(CACHE, "sky"), exist_ok=True)
     jobs = []  # signed links expire within minutes: download now, in parallel
     for p in model["panoLocations"]:
@@ -132,8 +146,8 @@ def floor_plan(model, floor, doors, scale=60, pad=0.8):
     pts = [_xy(v["position"]) for e in floor["edges"] for v in e["vertices"]]
     if not pts:
         return None
-    pts = np.array(pts)
-    lo, hi = pts.min(0) - pad, pts.max(0) + pad
+    pts = np.array(pts)  # type: ignore[assignment]  # list rebound as ndarray
+    lo, hi = pts.min(0) - pad, pts.max(0) + pad  # type: ignore[attr-defined]  # pts is an ndarray here
     w, h = ((hi - lo) * scale).astype(int)
     img = Image.new("RGB", (int(w), int(h)), "white")
     d = ImageDraw.Draw(img)

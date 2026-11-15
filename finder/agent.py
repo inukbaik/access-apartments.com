@@ -201,7 +201,7 @@ def run_agent(backend, request, ctx, max_steps=16, time_budget=120, call_timeout
         llm_s = time.monotonic() - t1
         if text:
             log(f"  model: {' '.join(text.split())[:110]}")
-        messages.append({"role": "assistant", "content": text or None, "tool_calls": [
+        messages.append({"role": "assistant", "content": text or None, "tool_calls": [  # type: ignore[dict-item]  # message dict mixes value types
             {"id": c["id"], "type": "function", "function": {"name": c["name"], "arguments": c["arguments"]}}
             for c in calls] or None})
         if not messages[-1]["tool_calls"]:
@@ -268,7 +268,7 @@ def requirements_line(ctx):
 
 
 def _radius_text(ctx):
-    out = []
+    out: list[str] = []
     for s_ in ctx.searches:
         t = f"{s_['radius_km']:g} km"
         if not out or out[-1] != t:
@@ -359,7 +359,7 @@ def answer(request, lat, lon, radius_km, limit, backend=None, refresh=False, max
     else:
         log(f"Agent: {backend.model} at {backend.base_url}")
         res = run_agent(backend, request, ctx, max_steps, time_budget, call_timeout, log)
-        reason = None if res.finished else f"AI agent unavailable (reason: {res.reason})"
+        reason = None if res.finished else f"AI agent unavailable (reason: {res.reason})"  # type: ignore[assignment]  # reason is str | None
 
     labels = None
     searched = ctx.ranked is not None
@@ -418,8 +418,8 @@ def answer(request, lat, lon, radius_km, limit, backend=None, refresh=False, max
     os.makedirs(out_dir, exist_ok=True)
     trace = {"request": request, "model": getattr(backend, "model", None),
              "base_url": getattr(backend, "base_url", None),
-             "outcome": "no_llm" if backend is None else ("finished" if res.finished else "fallback"),
-             "reason": reason or res.reason,
+             "outcome": "no_llm" if backend is None else ("finished" if res.finished else "fallback"),  # type: ignore[union-attr]  # res is set when backend is not None
+             "reason": reason or res.reason,  # type: ignore[union-attr]  # same
              "requirements": {"required": ctx.required, "added": ctx.added, "reasons": ctx.req_reasons,
                               "note": ctx.req_note},
              "extra_needs": {"needs": ex.needs, "reasons": ex.reasons, "rounds": ex.rounds, "error": ex.error,

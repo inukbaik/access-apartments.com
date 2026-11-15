@@ -17,11 +17,12 @@ import json
 import os
 import sys
 import time
+from typing import Any
 
 from finder.costar_text import KIT, _jsonl, _model_map
 
 CACHE = "cache/finder/costar_facts.json"
-_memo = {}
+_memo: dict[str, Any] = {}
 
 
 def _int(v):
@@ -60,7 +61,7 @@ def _residential_fact(l):
 
 
 def build_facts(kit=KIT, log=print):
-    models = {}
+    models: dict[str, list[Any]] = {}
     rmap = _model_map(f"{kit}/residential-listings.csv", "ListingId")
     for l in _jsonl(f"{kit}/data/residential-listings.jsonl"):
         for mid in rmap.get(str(l["id"]), []):
