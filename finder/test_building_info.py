@@ -179,4 +179,7 @@ assert B.combine([f], None)["elevator"]["status"] == "disagree"
 one_story = {"source": "commercial", "stories_total": 1, "floor_number": None, "elevator": {"passenger": None, "flag_true": False}}
 c = B.combine([one_story], {"status": "ok", "height_m": 11.4, "photo_date": "2026-07-03"})
 assert c["stories"]["status"] == "disagree" and c["elevator_need"].startswith("May have"), c["elevator_need"]
+two = dict(one_story, stories_total=2)
+c = B.combine([two], {"status": "ok", "height_m": 7.4, "photo_date": "2025-12-01"})   # Vexcel 1-3, agrees
+assert c["stories"]["status"] == "agree" and c["elevator_need"].startswith("Units above"), c["elevator_need"]
 print("ok")

@@ -41,6 +41,11 @@ a fail (with the reason) where data is missing. Needed whatever happens with the
 `.venv/bin/python -m finder.screen --lat 34.0242 --lon -118.2991 --radius-km 1.5 --limit 10`
 (4 of 10 buildings pass all checks; the rest show each fail reason.)
 
+**Demo point, building info:** Echo Park / downtown edge, LA:
+`.venv/bin/python -m finder.screen --lat 34.0705 --lon -118.2491 --radius-km 1.5 --limit 10 --building-info`
+(1 of 10 passes all checks; elevator status shows every kind: confirmed by a CoStar record, mentioned
+in listing text, information unavailable; stories cross-checked with Vexcel roof height.)
+
 **Findings so far** (800-listing survey, LA + Houston): doors are the bottleneck (only 4% of
 listings measure ≥ 32 in on every doorway); 7 listings pass all three checks.
 

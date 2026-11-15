@@ -97,7 +97,8 @@ def combine(facts, vexcel, text_mention=None):
     floor = floors[0] if floors else None
     vx = st["vexcel"]
     # Definite only when every available source says 2+ stories; otherwise "may".
-    multi = [c >= 2 for c in st["costar"]] + ([vx["lo"] >= 2] if vx else [])
+    # When CoStar and Vexcel agree, the CoStar count (inside the Vexcel range) decides.
+    multi = [c >= 2 for c in st["costar"]] + ([vx["lo"] >= 2] if vx and st["status"] != "agree" else [])
     maybe = any(c >= 2 for c in st["costar"]) or (vx and vx["hi"] >= 2)
     if multi and all(multi):
         need = "Units above the ground floor need an elevator."
