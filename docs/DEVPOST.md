@@ -84,7 +84,7 @@ In 800 random home listings in Los Angeles and Houston, **12 pass all three chec
 - So the result is two findings: narrow interior doors are common, and most scans are not yet
   labelled well enough to say.
 
-## What's next
+## What's next for access-apartments.com
 
 - **The entrance.** We do not check steps at the door. Vexcel oblique images could.
 - **Stairs inside a home.** A home with several floors can pass today; the page says that stairs
@@ -106,3 +106,36 @@ mypy, NumPy, Pillow, usaddress, HTML, CSS, JavaScript.
 
 - Repo: https://github.com/inukbaik/hack-p-thon
 - Video: (add link)
+
+## Other form fields
+
+**Elevator pitch:** Find a home you can get around in: every listing measured for wheelchair access
+from its own 3D scan.
+
+**Did you implement a generative AI model or API?** Yes. A local large language model, `qwen3:8b`
+on Ollama, through its OpenAI-compatible API.
+
+- **How.** The model is the planning layer. It reads a request in plain words and calls our tools:
+  set the checks, search the area, inspect a building, search the listing text for needs a scan
+  can't measure, and finish with a short note. Our code does all the measuring and ranking.
+- **Guardrails.** The model never decides pass or fail and cannot drop a check. Its notes are
+  withheld if they contradict the measurements or the listing text. If it is slow, unreachable or
+  makes bad tool calls, the page shows the measured results without it.
+- **Why.** People describe access needs in their own words. We ran the model locally so the
+  sponsor's data never left the laptop, and kept verdicts out of its hands because a wrong "pass"
+  sends someone to a home they can't use.
+
+**Technology feedback:**
+
+- **Matterport Model API.** Room classifications, door openings with widths, room boundaries and
+  panorama positions were enough to measure doorways and draw floor plans without the mesh. The
+  panorama rotation and cube-map face conventions are not documented clearly, signed image links
+  expire within minutes, and coverage is uneven: in our 800-listing sample 71% of scans had no room
+  labelled hallway and 47% had no mapped doorway. Schema introspection worked well.
+- **CoStar records kit.** Listing text, stories and elevator fields joined cleanly to the scans.
+  Commercial amenities come only as ids with no catalog of names. Addresses of units in one
+  building are written in many ways.
+- **Vexcel API.** Roof height per footprint was a useful cross-check on story counts. 23 of our 60
+  lookups were unusable (no footprint, no property data, or an implausible height).
+- **Ollama with qwen3:8b.** Tool calling worked and the data stayed local. A model this small
+  needs guardrails; runs took 25 to 50 seconds.
