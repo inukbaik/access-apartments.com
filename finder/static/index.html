@@ -24,6 +24,7 @@ html { font-size: 112.5%; }  /* 18px base: the page is read at arm's length in a
   --tracking-display: -0.02em;
   --color-out: oklch(56% 0.19 27);  /* a doorway out of spec: the photo dot and its plan label */
   --list-h: min(34rem, 62vh);
+  --color-out-on-ink: oklch(80% 0.1 27);
   --scrim: color-mix(in oklab, var(--color-ink) 70%, transparent);
   --scrim-deep: color-mix(in oklab, var(--color-ink) 90%, transparent);
   --on-ink-line: color-mix(in oklab, var(--color-paper) 40%, transparent);
@@ -111,7 +112,8 @@ body { background: var(--color-paper); color: var(--color-ink-2); font-family: v
 .error { border-top: var(--rule-hair) solid var(--color-rule-2); padding: var(--space-md) 0; color: var(--color-ink); }
 
 /* Detail: the signature */
-.detail { position: sticky; top: var(--space-md); border-top: var(--rule-hair) solid var(--color-rule-2); padding-top: var(--space-sm); }
+.detail { position: sticky; top: var(--space-md); max-height: calc(100vh - 2 * var(--space-md)); overflow-y: auto; overscroll-behavior: contain; border-top: var(--rule-hair) solid var(--color-rule-2); padding: var(--space-sm) var(--space-xs) var(--space-md) 0; scrollbar-gutter: stable; }
+@media (max-width: 68rem) { .detail { position: static; max-height: none; overflow: visible; } }
 .detail h2 { font-size: var(--text-2xl); line-height: 1.04; }
 .detail h3 { font-size: var(--text-lg); margin: var(--space-lg) 0 var(--space-xs); }
 .facts { margin: var(--space-md) 0 0; padding: 0; list-style: none; border-top: var(--rule-hair) solid var(--color-rule); }
@@ -127,7 +129,14 @@ body { background: var(--color-paper); color: var(--color-ink-2); font-family: v
 .plan .lbl.in text { fill: var(--color-accent-ink); }
 .plan a { cursor: pointer; }
 .plan a:focus-visible rect { stroke: var(--color-focus); stroke-width: 0.06; }
-.floor-name { font-size: var(--text-sm); font-weight: 500; color: var(--color-ink-2); margin: var(--space-sm) 0 var(--space-2xs); }
+.floors { display: flex; gap: var(--space-2xs); margin-bottom: var(--space-xs); flex-wrap: wrap; }
+.floors button { min-height: 2.25rem; padding: 0 var(--space-md); border-radius: var(--radius-pill); border: var(--rule-hair) solid var(--color-rule-2); background: transparent; color: var(--color-ink-2); font: inherit; font-size: var(--text-sm); font-weight: 500; cursor: pointer; }
+.floors button:hover { border-color: var(--color-ink); }
+.floors button[aria-selected="true"] { background: var(--color-ink); border-color: var(--color-ink); color: var(--color-paper); }
+.floors .n-out { color: var(--color-out); font-weight: 600; margin-left: var(--space-2xs); }
+.floors button[aria-selected="true"] .n-out { color: var(--color-out-on-ink); }
+.plan .lbl.on rect { stroke: var(--color-ink); stroke-width: var(--on-w); }
+.door-dot.fits { background: var(--color-accent); box-shadow: 0 0 0 3px var(--color-accent-ink), 0 0 0 7px color-mix(in oklab, var(--color-accent) 35%, transparent); }
 .key { display: flex; gap: var(--space-md); flex-wrap: wrap; margin-top: var(--space-xs); font-size: var(--text-sm); color: var(--color-muted); }
 .key span::before { content: ""; display: inline-block; width: 0.8em; height: 0.8em; border-radius: 50%; margin-right: var(--space-2xs); vertical-align: -0.05em; }
 .key .k-in::before { background: var(--color-accent); }
@@ -330,7 +339,7 @@ function planSvg(floor, doors) {
     const half = d.width_in / 39.37 / 2, cx = d.center[0], cy = d.center[1];
     const gap = `<line class="gap" stroke-width="${0.2 * k}" x1="${cx - ux * half - x0}" y1="${Y(cy - uy * half)}" x2="${cx + ux * half - x0}" y2="${Y(cy + uy * half)}"/>`;
     const txt = String(Math.round(d.width_in)), tw = (0.22 + 0.19 * txt.length) * k, th = 0.4 * k, ok = d.status === "pass";
-    const lbl = `<g class="lbl ${ok ? "in" : ""}"><rect x="${cx - x0 - tw / 2}" y="${Y(cy) - th / 2}" width="${tw}" height="${th}" rx="${th / 2}" stroke-width="${0.03 * k}"/>
+    const lbl = `<g class="lbl ${ok ? "in" : ""}" data-lbl="${d.photo ? esc(d.photo) : ""}" style="--on-w:${0.07 * k}"><rect x="${cx - x0 - tw / 2}" y="${Y(cy) - th / 2}" width="${tw}" height="${th}" rx="${th / 2}" stroke-width="${0.03 * k}"/>
       <text x="${cx - x0}" y="${Y(cy)}" font-size="${0.27 * k}">${txt}</text></g>`;
     const label = `Doorway ${Math.round(d.width_in)} inches, ${ok ? "fits" : d.status === "fail" ? "too narrow" : "unreliable measurement"}`;
     const j = d.photo ? shots.findIndex((s) => s.photo === d.photo) : -1;
@@ -342,7 +351,7 @@ function planSvg(floor, doors) {
 async function showDetail(i) {
   const b = rows[i];
   document.querySelectorAll(".table tbody tr").forEach((r) => r.setAttribute("aria-selected", r.dataset.i == i ? "true" : "false"));
-  document.querySelector(`.table tbody tr[data-i="${i}"]`)?.scrollIntoView({ block: "nearest" });
+  scrollWithin(document.querySelector(".tablebox"), document.querySelector(`.table tbody tr[data-i="${i}"]`), true);
   const sid = b.recommended_unit || b.sid;
   const facts = b.checks.map((c) => {
     const v = c.reason === "measured" ? `${Math.round(c.value)} in` : c.reason === "no data" ? "no data" : "unreliable";
@@ -363,13 +372,16 @@ async function showDetail(i) {
     const r = await fetch(`/api/evidence/${sid}`); const ev = await r.json();
     if (rows[i] !== b || !document.getElementById("plan")) return;
     if (!r.ok) throw new Error(ev.error);
-    shots = ev.doors.filter((d) => d.photo); cur = 0; shotSid = sid;
-    $("plan").innerHTML = (ev.floors || []).map((f) => `${ev.floors.length > 1 ? `<p class="floor-name">${esc(f.label)}</p>` : ""}<figure class="plan">${planSvg(f, ev.doors)}</figure>`).join("")
-      + `<p class="key"><span class="k-in">Fits a wheelchair (32 in or more)</span><span class="k-out">Too narrow (red dot on its photo)</span></p>`
+    shots = ev.doors.filter((d) => d.photo).sort((a, b) => (a.status === "pass") - (b.status === "pass")); cur = 0; shotSid = sid;
+    const floors = ev.floors || [], nOut = (f) => ev.doors.filter((d) => d.floor === f.id && d.status !== "pass").length;
+    const tabs = floors.length > 1 ? `<div class="floors" role="tablist" aria-label="Floors">${floors.map((f, j) =>
+      `<button role="tab" data-floor="${esc(f.id)}" aria-selected="${j === 0}">${esc(f.label)}${nOut(f) ? `<span class="n-out">${nOut(f)} narrow</span>` : ""}</button>`).join("")}</div>` : "";
+    $("plan").innerHTML = tabs + floors.map((f, j) => `<figure class="plan" data-plan="${esc(f.id)}" ${j ? "hidden" : ""}>${planSvg(f, ev.doors)}</figure>`).join("")
+      + `<p class="key"><span class="k-in">Fits a wheelchair (32 in or more)</span><span class="k-out">Too narrow</span></p>`
       + `<p class="muted">Each gap in a wall is a doorway, labelled with its width in inches.${shots.length ? " Click a label to see that doorway." : ""}</p>`
-      + (shots.length ? `<h3 id="photos">The doorways that don't fit</h3>
+      + (shots.length ? `<h3 id="photos">Doorways</h3><p class="muted">${(() => { const o = shots.filter((d) => d.status !== "pass").length; return o ? `${o} too narrow, shown first. ${shots.length - o} fit.` : `All ${shots.length} fit.`; })()}</p>
         <figure class="car">
-          <button class="car-open" id="car-open" aria-label="Enlarge photo"><img id="car-img" alt="" src="/evidence/${sid}/${shots[0].photo}"><span class="door-dot" aria-hidden="true"></span><span class="car-zoom">Click to enlarge</span></button>
+          <button class="car-open" id="car-open" aria-label="Enlarge photo"><img id="car-img" alt="" src="/evidence/${sid}/${shots[0].photo}"><span class="door-dot" id="car-dot" aria-hidden="true"></span><span class="car-zoom">Click to enlarge</span></button>
           <div class="car-bar">
             <button class="arrow" data-step="-1" aria-label="Previous doorway">${CHEV(-1)}</button>
             <figcaption class="car-cap" id="car-cap"></figcaption>
@@ -386,22 +398,39 @@ async function showDetail(i) {
 
 /* ---------- doorway photos: carousel and enlarged view ---------- */
 function caption(d, j) {
-  return `${Math.round(d.width_in)} in wide, at the red dot <small>Doorway ${j + 1} of ${shots.length} · seen from ${d.photo_from.distance_m} m away</small>`;
+  const verdict = d.status === "pass" ? "fits (green dot)" : d.status === "fail" ? "too narrow (red dot)" : "unreliable measurement (red dot)";
+  return `${Math.round(d.width_in)} in wide, ${verdict} <small>Doorway ${j + 1} of ${shots.length} · seen from ${d.photo_from.distance_m} m away</small>`;
 }
 function showShot(j) {
   if (!shots.length) return;
   cur = Math.max(0, Math.min(shots.length - 1, j));
   const d = shots[cur], src = `/evidence/${shotSid}/${d.photo}`, alt = `Doorway ${Math.round(d.width_in)} inches wide`;
-  if ($("car-img")) { $("car-img").src = src; $("car-img").alt = alt; $("car-cap").innerHTML = caption(d, cur); }
-  $("lb-pic").innerHTML = `<div class="pic"><img src="${src}" alt="${esc(alt)}"><span class="door-dot" aria-hidden="true"></span></div>`; $("lb-cap").innerHTML = caption(d, cur);
+  const fits = d.status === "pass";
+  if ($("car-img")) { $("car-img").src = src; $("car-img").alt = alt; $("car-cap").innerHTML = caption(d, cur); $("car-dot").classList.toggle("fits", fits); }
+  $("lb-pic").innerHTML = `<div class="pic"><img src="${src}" alt="${esc(alt)}"><span class="door-dot ${fits ? "fits" : ""}" aria-hidden="true"></span></div>`;
+  showFloor(d.floor);
+  document.querySelectorAll(".plan .lbl").forEach((g) => g.classList.toggle("on", g.dataset.lbl === d.photo)); $("lb-cap").innerHTML = caption(d, cur);
   document.querySelectorAll("[data-step]").forEach((b) => { b.disabled = cur + +b.dataset.step < 0 || cur + +b.dataset.step >= shots.length; });
   document.querySelectorAll("#dots button").forEach((b, k) => b.setAttribute("aria-current", k === cur ? "true" : "false"));
   shots.forEach((s, k) => { if (Math.abs(k - cur) === 1) new Image().src = `/evidence/${shotSid}/${s.photo}`; });  // preload neighbours
 }
+function scrollWithin(box, el, nearest) {  // scroll a panel, never the page
+  if (!box || !el) return;
+  const top = el.getBoundingClientRect().top - box.getBoundingClientRect().top + box.scrollTop;
+  if (nearest && top >= box.scrollTop && top + el.offsetHeight <= box.scrollTop + box.clientHeight) return;
+  box.scrollTo({ top: nearest ? top - box.clientHeight / 3 : top - 8, behavior: "smooth" });
+}
+function showFloor(id) {
+  if (!document.querySelector(`[data-plan="${id}"]`)) return;
+  document.querySelectorAll("[data-plan]").forEach((f) => { f.hidden = f.dataset.plan !== id; });
+  document.querySelectorAll("[data-floor]").forEach((b) => b.setAttribute("aria-selected", b.dataset.floor === id ? "true" : "false"));
+}
 document.addEventListener("click", (e) => {
+  const tab = e.target.closest("[data-floor]");
+  if (tab) return showFloor(tab.dataset.floor);
   const step = e.target.closest("[data-step]"), dot = e.target.closest("[data-shot]");
   if (step) return showShot(cur + +step.dataset.step);
-  if (dot) { e.preventDefault(); showShot(+dot.dataset.shot); if (dot.closest(".plan")) $("photos").scrollIntoView({ behavior: "smooth", block: "start" }); return; }
+  if (dot) { e.preventDefault(); showShot(+dot.dataset.shot); if (dot.closest(".plan")) scrollWithin($("detail"), $("photos")); return; }
   if (e.target.closest("#car-open")) { showShot(cur); $("lb").showModal(); return; }
   if (e.target.closest("#lb-close") || e.target === $("lb")) $("lb").close();
 });

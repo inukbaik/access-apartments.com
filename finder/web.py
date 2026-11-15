@@ -106,9 +106,11 @@ class App:
         path = os.path.join(evidence.OUT, sid, "evidence.json")
         if os.path.exists(path):
             with open(path) as f:
-                return json.load(f)
+                ev = json.load(f)
+            if ev.get("photos") == "all":  # older builds photographed failing doors only
+                return ev
         with self.evidence_lock:
-            return evidence.build(sid)
+            return evidence.build(sid, photos="all")
 
 
 def make_handler(app):

@@ -286,7 +286,7 @@ def build(sid, refresh=False, out_dir=OUT, photos="fail"):
                          for e in f.get("edges") or [] if len(e.get("vertices") or []) == 2 and e.get("type") == "wall"]}
               for f in model.get("floors") or []]
     floors = [f for f in floors if f["walls"]]
-    summary = {"sid": sid, "name": model.get("name"), "plans": plans, "floors": floors, "doors": doors,
+    summary = {"sid": sid, "name": model.get("name"), "photos": photos, "plans": plans, "floors": floors, "doors": doors,
                "note": "Door widths come from the scan's mapped openings and may include the frame. "
                        "Photos are rendered from the nearest panorama that can see the doorway."}
     with open(os.path.join(d, "evidence.json"), "w") as f:
