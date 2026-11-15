@@ -10,9 +10,9 @@ Update this file when you pick up or finish something. `git pull --rebase` first
 
 | Lane | Owner | Folder | Status |
 |---|---|---|---|
-| A. Finder (listing screener) | Inuk | `finder/` | Core screener done on `feat/finder`; agent loop next |
-| B. Localization + routing | Shane | `localize/` | Phase 0 follow-up runs |
-| C. Glasses app | _unassigned_ | `glasses-app/` | Waiting on the go / no go for B |
+| A. Finder (listing screener) | Inuk, Shane (web page) | `finder/` | Screener, agent, building info and web page done. **This is the demo.** |
+| B. Localization + routing | Shane | `localize/` | Dropped for the demo (test results stay in the README) |
+| C. Glasses app | _unassigned_ | `glasses-app/` | Dropped with B |
 | D. Demo, video, Devpost | _unassigned_ | `docs/` | Not started |
 
 ## A. Finder (Inuk)
@@ -28,12 +28,16 @@ a fail (with the reason) where data is missing. Needed whatever happens with the
 4. [x] Output: JSON per listing (checks, values, evidence ids), then a simple ranked view.
    One row per building (best unit shown, `+N units`); units are grouped by street address
    parsed with `usaddress` (`finder/buildings.py`). When unsure, units are not merged.
-5. [ ] Then (PROJECT_CONTEXT.md §7):
-   - [ ] 5b. Agent loop on a local model (Ollama; no paid API key, sponsor data stays on the
+5. [x] Then (PROJECT_CONTEXT.md §7):
+   - [x] 5b. Agent loop on a local model (Ollama; no paid API key, sponsor data stays on the
      laptop). Model choice in progress.
-   - [ ] 5a. Building info: stories (CoStar + Vexcel roof height, cross-referenced) and elevator status (CoStar),
+   - [x] 5a. Building info: stories (CoStar + Vexcel roof height, cross-referenced) and elevator status (CoStar),
      informational only (`--building-info`; never a check, never changes ranking).
-   - [ ] 5c. Evidence report per listing (floor plan, panorama crops, aerial crop).
+   - [x] 5c. Evidence per listing on the web page (`finder/web.py`, `finder/evidence.py`): floor plan
+     with every doorway's width, a photo of each doorway from the nearest panorama, building info.
+     No aerial crop.
+6. [x] Sun Nov 15: doorways into a room the scan classifies as a closet or pantry are not counted
+   (unclassified rooms still count); shared amenity scans ("Pool", "Fitness Center") are left out.
 
 **Done when (1–4, met):** one command prints a ranked list for an LA point with pass / fail per check and the reason for each fail (measured, no data, bad measurement).
 
@@ -46,7 +50,11 @@ a fail (with the reason) where data is missing. Needed whatever happens with the
 (1 of 10 passes all checks; elevator status shows every kind: confirmed by a CoStar record, mentioned
 in listing text, information unavailable; stories cross-checked with Vexcel roof height.)
 
-**Findings so far** (800-listing survey, LA + Houston): doors are the bottleneck (only 4% of
+**Demo, web page:** `.venv/bin/python -m finder.web --warm --no-llm`, then http://localhost:8800
+(see `finder/README.md`, "Web page" and "Demo").
+
+**Findings so far** (800-listing survey, LA + Houston; run before the closet rule of step 6, so
+the door figure is a lower bound): doors are the bottleneck (only 4% of
 listings measure ≥ 32 in on every doorway); 7 listings pass all three checks.
 
 **Open questions:** does CoStar allow sending sponsor data to cloud AI models (ask `/ask-costar`)?

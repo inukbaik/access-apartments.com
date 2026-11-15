@@ -374,6 +374,7 @@ async function showDetail(i) {
     <a class="scan-link" href="https://my.matterport.com/show/?m=${esc(sid)}" target="_blank" rel="noopener">Open the 3D scan</a>
     <ul class="facts">${facts}</ul>
     ${said ? `<h3>What the listing says</h3>${said}` : ""}
+    ${b.building_info ? `<h3>The building</h3><p class="quote">${esc(b.building_info.message)}</p><p class="muted">For information only: stories and elevator never change the verdict or the order.</p>` : ""}
     <h3>Floor plan</h3><div id="plan"><p class="loading-line">Drawing the floor plan from the scan&hellip;</p></div>`;
   try {
     const r = await fetch(`/api/evidence/${sid}`); const ev = await r.json();

@@ -131,6 +131,12 @@ Computed after the ranking is final, only for the shown buildings, stored under 
 
 ## Demo (2 minutes)
 
+**On the web page** (preferred): `.venv/bin/python -m finder.web --warm --no-llm`, wait for
+"Finder demo on ...", open http://localhost:8800. Search "Los Angeles: USC / W 36th St" (4 of 10 fit),
+open a home that fits and one that does not, click a red label on the floor plan to see that doorway.
+Then "Houston: Aldine": homes whose listings mention step-free entry, none fits. For the AI agent,
+tick the box on the USC search (about 25 s). The same two runs on the command line follow.
+
 Two runs, both in LA. **Run each once beforehand** so everything loads from `cache/` and takes a
 few seconds. The first run fetches from Matterport and Vexcel live and takes about a minute.
 

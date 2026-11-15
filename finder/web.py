@@ -25,7 +25,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import urlparse
 
-from finder import evidence
+from finder import building_info, costar_facts, costar_text, evidence
 from finder.agent import answer
 from finder.llm import DEFAULT_BASE_URL, DEFAULT_MODEL, OpenAICompatBackend
 
@@ -75,6 +75,7 @@ class App:
         self.jobs = {}
         self.run_lock = threading.Lock()  # one search at a time (stdout capture, shared caches)
         self.evidence_lock = threading.Lock()
+        self.costar = None  # (facts, text index), loaded on the first search
         self.llm_default = llm_default
         self.base_url, self.model, self.api_key, self.call_timeout = base_url, model, api_key, call_timeout
 
@@ -97,11 +98,32 @@ class App:
                            out_dir=out_dir, log=job.log.append)
                 with open(os.path.join(out_dir, "agent_trace.json")) as f:
                     job.result = json.load(f)
+                self._building_info(job)
                 job.status = "done"
             except Exception as e:  # show the error on the page; never hang the job
                 job.error = f"{type(e).__name__}: {e}"
                 job.log.append(traceback.format_exc(limit=3))
                 job.status = "error"
+
+    def _building_info(self, job):
+        """Stories and elevator per shown building. Informational: added after the ranking is final."""
+        if self.costar is None:
+            facts, tindex = {}, None
+            try:
+                facts = costar_facts.load_facts()
+            except RuntimeError as e:
+                job.log.append(f"  building info: CoStar facts unavailable: {e}")
+            try:
+                tindex = costar_text.load_index()
+            except RuntimeError as e:
+                job.log.append(f"  building info: CoStar text unavailable: {e}")
+            self.costar = (facts, tindex)
+        rows = [b for b in job.result.get("ranked") or [] if b.get("lat") is not None]
+        recs = [{"candidate": {"sid": b["sid"], "lat": b["lat"], "lon": b["lon"]},
+                 "units": [{"candidate": {"sid": x["sid"]}} for x in b["units"]]} for b in rows]
+        building_info.annotate(recs, *self.costar, log=job.log.append)
+        for b, rec in zip(rows, recs):
+            b["building_info"] = rec["building_info"]
 
     def warm(self, radius_km=1.5, limit=10):
         """Run every preset once without the agent and build its evidence, so the demo loads from cache."""

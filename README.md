@@ -54,6 +54,13 @@ and `finish`. Our code does all the measuring and ranking.
   get a one-line notice and the ranked results based only on measurements. Every step is saved
   to `out/finder/agent_trace.json`.
 
+### Web page (`finder/web.py`)
+
+`.venv/bin/python -m finder.web --warm` serves the finder at http://localhost:8800. Pick an area and
+get the ranked buildings. A click on one shows its floor plan drawn from the scan with every doorway's
+width, a photo of each doorway rendered from the nearest panorama, what the listing text says, and the
+building's stories and elevator status (CoStar and Vexcel roof height; information only).
+
 ### Indoor localization test (`scripts/localize_test.py`)
 
 This script tests whether a photo from a phone or from Meta Ray-Ban glasses can be matched to
@@ -68,6 +75,7 @@ the atrium matched well.
 In a survey of 800 listings across LA and Houston:
 
 - **Doors are the bottleneck.** Only 4% of listings measure ≥ 32 in on every mapped doorway.
+  (Surveyed before closet and pantry doorways were excluded, so this is a lower bound.)
 - **Only 7 listings pass all three checks.**
 - Door openings are sparse in the scans, and many rooms are unlabelled. This is why missing data
   must fail rather than pass.
