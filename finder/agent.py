@@ -336,7 +336,7 @@ def _ranked_json(ranked, keys, labels, ex, passes, required):
         c = r["candidate"]
         u = recommended_unit(r, required) if not r.get("error") else None
         out.append({"label": labels[n - 1] if labels else f"B{n}", "sid": c["sid"], "name": c["name"],
-                    "dist_km": c["dist_km"], "error": r.get("error"), "checks": r["checks"],
+                    "address": c.get("address"), "city": c.get("city"), "dist_km": c["dist_km"], "error": r.get("error"), "checks": r["checks"],
                     "passes": bool(passes(r)), "recommended_unit": u["candidate"]["sid"] if u else None,
                     "units": [{"sid": x["candidate"]["sid"], "name": x["candidate"]["name"], "checks": x["checks"],
                                "error": x.get("error")} for x in r.get("units") or [r]],

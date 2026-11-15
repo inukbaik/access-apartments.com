@@ -128,6 +128,14 @@ def make_handler(app):
             parts = path.strip("/").split("/")
             if path == "/":
                 return self._send(200, PAGE.read_bytes(), "text/html; charset=utf-8")
+            if path in ("/tokens.css", "/base.css"):
+                return self._send(200, (PAGE.parent / path[1:]).read_bytes(), "text/css; charset=utf-8")
+            if len(parts) == 3 and parts[:2] == ["api", "thumb"] and SID_RE.match(parts[2]):
+                try:
+                    with open(evidence.thumbnail(parts[2]), "rb") as f:
+                        return self._send(200, f.read(), "image/jpeg")
+                except Exception as e:
+                    return self._send(502, {"error": f"{type(e).__name__}: {e}"})
             if path == "/api/config":
                 return self._send(200, {"presets": PRESETS, "llm_default": app.llm_default, "model": app.model})
             if len(parts) == 3 and parts[:2] == ["api", "job"]:

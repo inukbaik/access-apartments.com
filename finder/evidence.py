@@ -179,17 +179,9 @@ def render_view(faces, rotation, yaw_deg, fov=FOV, size=480):
 
 
 def _mark_door(img, door, pos, yaw_deg, fov=FOV):
-    """Label the view: a marker at the top center (the view is aimed at the doorway's mapped center;
-    door positions in the scan are approximate, so we don't draw exact edges) and the width."""
-    W, H = img.size
-    d = ImageDraw.Draw(img)
-    c = STATUS_COLOR[door["status"]]
-    d.polygon([(W / 2 - 12, 30), (W / 2 + 12, 30), (W / 2, 48)], fill=c, outline="white")
-    word = {"pass": "OK", "fail": "too narrow", "bad measurement": "unreliable measurement"}[door["status"]]
-    label = f'Doorway {door["width_in"]:.0f} in: {word}'
-    tw = 7 * len(label) + 16
-    d.rectangle([W / 2 - tw / 2, 4, W / 2 + tw / 2, 28], fill=c)
-    d.text((W / 2 - tw / 2 + 8, 9), label, fill="white")
+    """The view is aimed at the doorway's mapped center; the page's caption gives the width. No overlay:
+    door positions in the scan are approximate, so marks on the photo would overstate the precision."""
+    return
 
 
 def _crosses(p, q, a, b):
@@ -238,6 +230,32 @@ def door_photo(sid, model, door):
     return img, {"pano": p["id"], "pano_label": p["label"], "distance_m": round(float(dist), 1)}
 
 
+# ------------------------------------------------------------------ listing photo
+THUMB_QUERY = """query Thumb($id: ID!) { model(id: $id) {
+  panoLocations { id label skybox(resolution: "2k") { status children } } } }"""
+
+
+def thumbnail(sid):
+    """A photo for the listing row: one horizon face of the scan's first panorama (JPEG path)."""
+    path = os.path.join(OUT, sid, "thumb.jpg")
+    if os.path.exists(path):
+        return path
+    data, errors = graph(THUMB_QUERY, {"id": sid})
+    panos = [p for p in ((data or {}).get("model") or {}).get("panoLocations") or []
+             if (p.get("skybox") or {}).get("status") == "available" and len(p["skybox"].get("children") or []) >= 5]
+    if not panos:
+        raise EvidenceError(f"{sid}: no panorama available. errors={json.dumps(errors)[:200] if errors else None}")
+    panos.sort(key=lambda p: int(p["label"]) if str(p.get("label", "")).isdigit() else 10 ** 6)
+    url = panos[0]["skybox"]["children"][1]
+    r = requests.get(url, timeout=60)
+    r.raise_for_status()
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    img = Image.open(__import__("io").BytesIO(r.content)).convert("RGB")
+    img.thumbnail((480, 480))
+    img.save(path, quality=82)
+    return path
+
+
 # ------------------------------------------------------------------ report
 def build(sid, refresh=False, out_dir=OUT, photos="fail"):
     """Write plans + door photos to out/evidence/<sid>/ and return a JSON-able summary.
@@ -263,7 +281,12 @@ def build(sid, refresh=False, out_dir=OUT, photos="fail"):
                 name = f"door_{n}.jpg"
                 img.save(os.path.join(d, name), quality=85)
                 dr["photo"], dr["photo_from"] = name, info
-    summary = {"sid": sid, "name": model.get("name"), "plans": plans, "doors": doors,
+    floors = [{"id": f["id"], "label": f["label"],
+               "walls": [[*_xy(e["vertices"][0]["position"]), *_xy(e["vertices"][1]["position"])]
+                         for e in f.get("edges") or [] if len(e.get("vertices") or []) == 2 and e.get("type") == "wall"]}
+              for f in model.get("floors") or []]
+    floors = [f for f in floors if f["walls"]]
+    summary = {"sid": sid, "name": model.get("name"), "plans": plans, "floors": floors, "doors": doors,
                "note": "Door widths come from the scan's mapped openings and may include the frame. "
                        "Photos are rendered from the nearest panorama that can see the doorway."}
     with open(os.path.join(d, "evidence.json"), "w") as f:

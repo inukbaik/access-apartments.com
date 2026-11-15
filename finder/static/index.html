@@ -4,228 +4,343 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Accessible Spaces</title>
+<meta name="description" content="Find a home a wheelchair user can get around in: every listing measured from its own 3D scan.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Epilogue:wght@400;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
-  :root {
-    --bg: #f6f5f2; --panel: #ffffff; --fg: #17181a; --muted: #5d6168; --line: #e2e0da;
-    --accent: #2457d6; --pass: #1f8a4c; --pass-bg: #e5f4ea; --fail: #c4372b; --fail-bg: #fbe9e7;
-    --nodata: #9a5b00; --nodata-bg: #fdf1dc; --info: #4b5563; --info-bg: #eef0f3; --mono: ui-monospace, SFMono-Regular, Menlo, monospace;
-  }
-  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
-    --bg: #121315; --panel: #1b1d20; --fg: #eceef1; --muted: #9aa0a8; --line: #2c2f34;
-    --accent: #7aa2ff; --pass: #4cc47e; --pass-bg: #163222; --fail: #ff7a6b; --fail-bg: #3a1c19;
-    --nodata: #f0b453; --nodata-bg: #33270f; --info: #b6bcc5; --info-bg: #25282d; } }
-  :root[data-theme="dark"] {
-    --bg: #121315; --panel: #1b1d20; --fg: #eceef1; --muted: #9aa0a8; --line: #2c2f34;
-    --accent: #7aa2ff; --pass: #4cc47e; --pass-bg: #163222; --fail: #ff7a6b; --fail-bg: #3a1c19;
-    --nodata: #f0b453; --nodata-bg: #33270f; --info: #b6bcc5; --info-bg: #25282d; }
-  * { box-sizing: border-box; }
-  body { margin: 0; background: var(--bg); color: var(--fg); font: 16px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif; }
-  header { padding: 28px 16px 8px; max-width: 1180px; margin: 0 auto; }
-  h1 { margin: 0; font-size: 28px; letter-spacing: -0.02em; }
-  .tag { margin: 4px 0 0; color: var(--muted); max-width: 720px; }
-  main { max-width: 1180px; margin: 0 auto; padding: 8px 16px 48px; display: grid; grid-template-columns: 360px 1fr; gap: 20px; align-items: start; }
-  @media (max-width: 900px) { main { grid-template-columns: 1fr; } }
-  .panel { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 16px; }
-  label { display: block; font-weight: 600; font-size: 14px; margin: 12px 0 4px; }
-  textarea, select, input[type=number] { width: 100%; font: inherit; color: var(--fg); background: var(--bg); border: 1px solid var(--line); border-radius: 10px; padding: 10px; }
-  textarea { min-height: 76px; resize: vertical; }
-  .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-  .check { display: flex; gap: 8px; align-items: center; font-weight: 500; margin-top: 12px; }
-  button { font: inherit; font-weight: 600; border-radius: 10px; border: 0; padding: 12px 16px; cursor: pointer; }
-  .primary { width: 100%; margin-top: 16px; background: var(--accent); color: #fff; }
-  .primary:disabled { opacity: .6; cursor: wait; }
-  .ghost { background: var(--info-bg); color: var(--fg); padding: 8px 12px; font-size: 14px; }
-  .rule { font-size: 13px; color: var(--muted); margin-top: 14px; border-top: 1px solid var(--line); padding-top: 12px; }
-  h2 { font-size: 15px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); margin: 0 0 10px; }
-  #steps { font-family: var(--mono); font-size: 12.5px; max-height: 260px; overflow: auto; white-space: pre-wrap; margin: 0; color: var(--muted); }
-  #steps .step { color: var(--fg); }
-  #steps .warn { color: var(--nodata); }
-  .status-line { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; margin-bottom: 8px; }
-  .summary { font-size: 18px; font-weight: 600; margin: 4px 0 14px; }
-  .banner { background: var(--nodata-bg); color: var(--nodata); border-radius: 10px; padding: 8px 12px; font-size: 14px; margin-bottom: 12px; }
-  .notes { background: var(--info-bg); border-radius: 10px; padding: 10px 12px; font-size: 14px; margin-bottom: 14px; }
-  .cards { display: grid; gap: 12px; }
-  .card { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 14px 16px; }
-  .card.ok { border-left: 6px solid var(--pass); }
-  .card.bad { border-left: 6px solid var(--fail); }
-  .card-top { display: flex; justify-content: space-between; gap: 12px; align-items: baseline; flex-wrap: wrap; }
-  .name { font-weight: 700; font-size: 17px; }
-  .meta { color: var(--muted); font-size: 13px; }
-  .verdict { font-weight: 700; font-size: 14px; }
-  .verdict.ok { color: var(--pass); } .verdict.bad { color: var(--fail); }
-  .chips { display: flex; flex-wrap: wrap; gap: 6px; margin: 10px 0 4px; }
-  .chip { font-size: 13px; border-radius: 999px; padding: 4px 10px; font-weight: 600; }
-  .chip.pass { background: var(--pass-bg); color: var(--pass); }
-  .chip.fail { background: var(--fail-bg); color: var(--fail); }
-  .chip.nodata { background: var(--nodata-bg); color: var(--nodata); }
-  .chip.info { background: var(--info-bg); color: var(--info); }
-  .quote { font-size: 13px; color: var(--muted); margin: 4px 0 0; }
-  .quote b { color: var(--fg); }
-  .card-actions { margin-top: 10px; display: flex; gap: 8px; align-items: center; }
-  .evidence { margin-top: 12px; border-top: 1px solid var(--line); padding-top: 12px; }
-  .plans, .doors { display: grid; gap: 10px; }
-  .plans { grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); }
-  .doors { grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); margin-top: 10px; }
-  figure { margin: 0; background: var(--bg); border-radius: 10px; overflow: hidden; border: 1px solid var(--line); }
-  figure img { width: 100%; display: block; background: #fff; }
-  figcaption { font-size: 12.5px; padding: 6px 8px; color: var(--muted); }
-  .legend { font-size: 13px; color: var(--muted); display: flex; gap: 14px; flex-wrap: wrap; margin: 6px 0; }
-  .dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 4px; vertical-align: -1px; }
-  .empty { color: var(--muted); padding: 30px 0; text-align: center; }
-  .spinner { display: inline-block; width: 12px; height: 12px; border: 2px solid var(--line); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.8s linear infinite; vertical-align: -1px; }
-  @keyframes spin { to { transform: rotate(360deg); } }
-  .sr { position: absolute; left: -9999px; }
+/* Hallmark · shape: app screen · genre: editorial · theme: Ink (deal 3/3, seed accessible-housing-finder-wheelchair-9b34·568eebef·2026-11-15·r0)
+ * nav: top bar with the search as one sentence · signature: the floor plan drawn from the scan, every doorway gap labelled with its width · states: idle, loading, empty, error, full · ink: paper
+ * axes: light/grotesk-sans/chromatic-teal · posture: restrained · contrast: pass · v2.0.0 */
+/* Hallmark · pre-emit critique: P4 H4 E4 S4 R3 V4 · weakest: R, the listing rows are dense; figures share one mono column so they scan as a table */
+/* waive 22 · ink and greys at zero chroma · a notice board is printed in plain black */
+@import url("./tokens.css");
+@import url("./base.css");
+
+:root {
+  --plan-wall: var(--color-ink);
+  --col-detail: 30rem;
+}
+
+body { background: var(--color-paper); color: var(--color-ink-2); font-family: var(--font-body); }
+.wrap { max-width: 84rem; margin: 0 auto; padding: 0 var(--space-lg); }
+
+/* Top bar */
+.bar { border-bottom: var(--rule-hair) solid var(--color-ink); }
+.bar .wrap { display: flex; align-items: baseline; justify-content: space-between; gap: var(--space-md); padding-block: var(--space-md); }
+.word { font-family: var(--font-display); font-weight: 700; letter-spacing: var(--tracking-display); color: var(--color-ink); font-size: var(--text-lg); margin: 0; }
+.bar p { margin: 0; color: var(--color-muted); font-size: var(--text-sm); }
+
+/* The search, as one sentence */
+.ask { padding-block: var(--space-lg) var(--space-md); }
+.ask h1 { font-family: var(--font-display); font-weight: 700; letter-spacing: var(--tracking-display); color: var(--color-ink); font-size: var(--text-2xl); line-height: 1.05; margin: 0 0 var(--space-md); max-width: 30ch; overflow-wrap: break-word; min-width: 0; }
+.form { display: grid; grid-template-columns: minmax(0, 2.2fr) minmax(0, 1.4fr) minmax(0, 0.7fr) auto; gap: var(--space-sm); align-items: end; }
+.field label { display: block; font-size: var(--text-sm); color: var(--color-muted); margin-bottom: var(--space-2xs); }
+.field input, .field select { width: 100%; min-height: 2.5rem; font: inherit; color: var(--color-ink); background: var(--color-paper); border: var(--rule-hair) solid var(--color-rule); border-radius: 10px; padding: var(--space-xs) var(--space-sm); }
+.field input:hover, .field select:hover { border-color: var(--color-muted); }
+.field input:focus-visible, .field select:focus-visible { outline: 2px solid var(--color-focus); outline-offset: 1px; }
+.opts { display: flex; align-items: center; gap: var(--space-md); margin-top: var(--space-sm); font-size: var(--text-sm); color: var(--color-muted); flex-wrap: wrap; }
+.opts label { display: inline-flex; gap: var(--space-xs); align-items: center; cursor: pointer; color: var(--color-ink-2); }
+.opts input { accent-color: var(--color-ink); width: 1rem; height: 1rem; }
+.opts input:focus-visible { outline: 2px solid var(--color-focus); outline-offset: 2px; }
+.btn { min-height: 2.5rem; border: var(--rule-hair) solid var(--color-rule); border-radius: 10px; padding: var(--space-xs) var(--space-md); font: inherit; font-weight: 600; background: var(--color-paper-2); color: var(--color-ink); cursor: pointer; transition: background-color var(--dur-micro), border-color var(--dur-micro); }
+.btn:hover { border-color: var(--color-muted); }
+.btn:active { transform: translateY(1px); }
+.btn:focus-visible { outline: 2px solid var(--color-focus); outline-offset: 2px; }
+.btn:disabled, .btn--primary:disabled { background: var(--color-paper-3); border-color: var(--color-rule); color: var(--color-muted); cursor: progress; }
+.btn--primary { background: var(--color-ink); border-color: var(--color-ink); color: var(--color-paper); }
+.btn--primary:hover { background: var(--color-ink-2); }
+
+/* Layout */
+.work { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, var(--col-detail)); gap: var(--space-xl); padding-block: var(--space-md) var(--space-2xl); align-items: start; }
+@media (max-width: 64rem) { .work { grid-template-columns: minmax(0, 1fr); } .form { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); } }
+@media (max-width: 36rem) { .form { grid-template-columns: minmax(0, 1fr); } .wrap { padding: 0 var(--space-md); } }
+
+/* What it did */
+.log { margin: var(--space-xs) 0 var(--space-lg); padding: 0; list-style: none; font-size: var(--text-sm); }
+.log li { display: grid; grid-template-columns: 1.5rem minmax(0, 1fr); gap: var(--space-xs); padding: var(--space-2xs) 0; color: var(--color-muted); }
+.log li.now { color: var(--color-ink); font-weight: 600; }
+.log li.warn { color: var(--color-ink-2); }
+.log .n { font-family: var(--font-outlier); color: var(--color-muted); }
+.log-head { display: flex; justify-content: space-between; align-items: baseline; gap: var(--space-sm); }
+.log-head h2, .list-head h2, .detail h2, .detail h3 { font-family: var(--font-display); font-weight: 700; color: var(--color-ink); letter-spacing: -0.02em; margin: 0; }
+.log-head h2, .list-head h2 { font-size: var(--text-lg); }
+.muted { color: var(--color-muted); font-size: var(--text-sm); }
+
+/* Result list */
+.list-head { display: flex; justify-content: space-between; align-items: baseline; gap: var(--space-md); margin-bottom: var(--space-xs); flex-wrap: wrap; }
+.count { font-family: var(--font-display); font-weight: 700; letter-spacing: var(--tracking-display); color: var(--color-ink); font-size: var(--text-xl); }
+.notes { background: var(--color-paper-2); border: var(--rule-hair) solid var(--color-rule); border-radius: var(--radius-card); padding: var(--space-sm) var(--space-md); font-size: var(--text-sm); margin: 0 0 var(--space-md); }
+.table { width: 100%; border-collapse: collapse; border-top: var(--rule-hair) solid var(--color-ink); }
+.table th { text-align: left; font-weight: 400; font-size: var(--text-sm); color: var(--color-muted); padding: var(--space-xs); border-bottom: var(--rule-hair) solid var(--color-rule); }
+.table td { padding: var(--space-sm) var(--space-xs); border-bottom: var(--rule-hair) solid var(--color-rule); vertical-align: middle; }
+.table tbody tr { cursor: pointer; transition: background-color var(--dur-micro); }
+.table tbody tr:hover { background: var(--color-paper-2); }
+.table tbody tr[aria-selected="true"] { background: var(--color-paper-2); box-shadow: inset 3px 0 0 var(--color-ink); }
+.table tbody tr:focus-visible { outline: 2px solid var(--color-focus); outline-offset: -2px; }
+.thumb { width: 4.5rem; height: 3.25rem; object-fit: cover; border-radius: 8px; outline: var(--rule-hair) solid var(--color-rule); outline-offset: -1px; background: var(--color-paper-3); display: block; filter: saturate(0.65); }
+.name { color: var(--color-ink); font-weight: 600; display: block; }
+.addr { color: var(--color-muted); font-size: var(--text-sm); }
+.fig { font-family: var(--font-outlier); font-size: var(--text-sm); color: var(--color-ink); white-space: nowrap; font-variant-numeric: tabular-nums; }
+.fig.miss { display: inline-block; padding: 0 var(--space-xs); border-radius: var(--radius-pill); box-shadow: inset 0 0 0 var(--rule-hair) var(--color-muted); }
+.fig.none { color: var(--color-muted); font-family: var(--font-body); }
+.tag { display: inline-flex; padding: var(--space-2xs) var(--space-sm); border-radius: var(--radius-pill); font-size: var(--text-xs); font-weight: 600; white-space: nowrap; }
+.tag--in { background: var(--color-accent-soft); color: var(--color-accent-soft-ink); }
+.tag--out { box-shadow: inset 0 0 0 var(--rule-hair) var(--color-rule); color: var(--color-muted); }
+.said { font-size: var(--text-xs); color: var(--color-muted); display: block; margin-top: var(--space-2xs); }
+@media (max-width: 48rem) { .table .c-thumb, .table .c-hall, .table .c-turn { display: none; } }
+
+/* Skeleton and empty states */
+.skel td div { height: 0.8rem; border-radius: 4px; background: var(--color-paper-3); }
+.skel td .tall { height: 3.25rem; width: 4.5rem; border-radius: 8px; }
+.empty { border-top: var(--rule-hair) solid var(--color-ink); padding: var(--space-xl) 0; color: var(--color-muted); max-width: 40ch; }
+.error { border-top: var(--rule-hair) solid var(--color-ink); padding: var(--space-md) 0; color: var(--color-ink); }
+
+/* Detail: the signature */
+.detail { position: sticky; top: var(--space-md); border-top: var(--rule-hair) solid var(--color-ink); padding-top: var(--space-sm); }
+.detail h2 { font-size: var(--text-xl); line-height: 1.05; overflow-wrap: break-word; min-width: 0; }
+.detail h3 { font-size: var(--text-md); margin: var(--space-lg) 0 var(--space-xs); }
+.facts { margin: var(--space-md) 0 0; padding: 0; list-style: none; border-top: var(--rule-hair) solid var(--color-rule); }
+.facts li { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: var(--space-sm); padding: var(--space-xs) 0; border-bottom: var(--rule-hair) solid var(--color-rule); font-size: var(--text-sm); }
+.facts .why { grid-column: 1 / -1; color: var(--color-muted); font-size: var(--text-xs); margin-top: calc(-1 * var(--space-2xs)); }
+.plan { margin: 0; background: var(--color-paper-2); border: var(--rule-hair) solid var(--color-rule); border-radius: var(--radius-card); padding: var(--space-sm); }
+.plan svg { width: 100%; height: auto; display: block; }
+.plan .wall { stroke: var(--plan-wall); stroke-linecap: square; fill: none; }
+.plan .gap { stroke: var(--color-paper-2); stroke-linecap: butt; }
+.plan .lbl rect { fill: var(--color-paper); stroke: var(--color-muted); }
+.plan .lbl.in rect { fill: var(--color-accent-soft); stroke: none; }
+.plan .lbl text { font-family: var(--font-outlier); fill: var(--color-ink); text-anchor: middle; dominant-baseline: central; }
+.plan .lbl.in text { fill: var(--color-accent-soft-ink); }
+.plan a:focus-visible rect { stroke: var(--color-focus); stroke-width: 0.06; }
+.shots figcaption { font-size: var(--text-xs); color: var(--color-muted); margin-top: var(--space-xs); }
+.floor-name { font-size: var(--text-sm); color: var(--color-ink-2); margin: var(--space-sm) 0 var(--space-2xs); }
+.shots { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-sm); }
+.shots figure { margin: 0; }
+.shots img { width: 100%; aspect-ratio: 1; object-fit: cover; border-radius: var(--radius-card); outline: var(--rule-hair) solid var(--color-rule); outline-offset: -1px; display: block; filter: saturate(0.8); }
+.shots figure:target img { outline: 2px solid var(--color-ink); }
+.quote { margin: 0 0 var(--space-xs); font-size: var(--text-sm); }
+.quote q { color: var(--color-ink); }
+.loading-line { color: var(--color-muted); font-size: var(--text-sm); padding: var(--space-md) 0; }
+
+@media (prefers-reduced-motion: reduce) { *, *::before, *::after { transition-duration: 0.01ms !important; } }
 </style>
 </head>
 <body>
-<header>
-  <h1>Accessible Spaces</h1>
-  <p class="tag">Find a home a wheelchair user can actually live in. Every listing is measured from its own
-    3D scan: hallways, doorways and bathroom turning space. If something can't be measured, it counts as a fail.</p>
+<header class="bar">
+  <div class="wrap">
+    <p class="word">Accessible Spaces</p>
+    <p>Every home measured from its own 3D scan</p>
+  </div>
 </header>
-<main>
-  <section class="panel" aria-labelledby="search-h">
-    <h2 id="search-h">Search</h2>
-    <form id="form">
-      <label for="request">What do you need?</label>
-      <textarea id="request">I use a power wheelchair. I need a wheelchair accessible home with step-free entry.</textarea>
-      <label for="area">Area</label>
-      <select id="area"></select>
-      <div class="row2">
-        <div><label for="radius">Radius (km)</label><input id="radius" type="number" min="0.5" max="5" step="0.5" value="1.5"></div>
-        <div><label for="limit">Buildings</label><input id="limit" type="number" min="5" max="20" step="1" value="10"></div>
-      </div>
-      <label class="check"><input type="checkbox" id="llm"> <span>Plan the search with the AI agent <span class="meta" id="model"></span></span></label>
-      <button class="primary" id="go" type="submit">Find homes</button>
-    </form>
-    <p class="rule"><b>Measured:</b> hallway &ge; 36 in, doorway &ge; 32 in, bathroom with a 60 in turning circle.
-      <b>Not measured:</b> roll-in shower, grab bars, step-free entry. Those are searched in the listing text and
-      shown as a quote, or as "information unavailable".</p>
-    <div style="margin-top:14px">
-      <div class="status-line"><h2 style="margin:0">Agent steps</h2><span class="meta" id="elapsed"></span></div>
-      <pre id="steps" aria-live="polite">Steps appear here while the search runs.</pre>
+
+<section class="ask wrap" aria-labelledby="ask-h">
+  <h1 id="ask-h">Find a home you can get around in.</h1>
+  <form id="form" class="form">
+    <div class="field"><label for="request">What you need</label>
+      <input id="request" value="I use a power wheelchair. I need a wheelchair accessible home with step-free entry."></div>
+    <div class="field"><label for="area">Near</label><select id="area"></select></div>
+    <div class="field"><label for="radius">Within</label>
+      <select id="radius"><option value="1">1 km</option><option value="1.5" selected>1.5 km</option><option value="3">3 km</option><option value="5">5 km</option></select></div>
+    <button class="btn btn--primary" id="go" type="submit">Find homes</button>
+  </form>
+  <div class="opts">
+    <label><input type="checkbox" id="llm"> Let the AI agent plan the search</label>
+    <span>Doorways 32 in, hallways 36 in, a 60 in turning circle in a bathroom. Anything the scan can’t measure counts as a fail.</span>
+  </div>
+</section>
+
+<main class="work wrap">
+  <section aria-labelledby="list-h">
+    <div id="logbox" hidden>
+      <div class="log-head"><h2>What it did</h2><span class="muted" id="elapsed"></span></div>
+      <ol class="log" id="log" aria-live="polite"></ol>
     </div>
+    <div class="list-head"><h2 id="list-h">Homes</h2><span id="summary" class="muted"></span></div>
+    <div id="notes"></div>
+    <div id="list"><p class="empty">Pick an area and press Find homes. Each home is measured from its scan in a few seconds.</p></div>
   </section>
-  <section aria-labelledby="results-h">
-    <h2 id="results-h">Results</h2>
-    <div id="results"><p class="empty">Choose an area and press "Find homes".</p></div>
-  </section>
+  <aside class="detail" id="detail" aria-live="polite">
+    <p class="muted">Choose a home to see its floor plan, with every doorway measured.</p>
+  </aside>
 </main>
+
 <script>
 const $ = (id) => document.getElementById(id);
 const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
-const CHECK_NAMES = { hallway: "Hallway", door: "Doorways", turning: "Bathroom turning space" };
-let presets = [];
+const NAMES = { hallway: "Hallway", door: "Narrowest doorway", turning: "Bathroom turning space" };
+let presets = [], rows = [];
 
 async function init() {
   const cfg = await (await fetch("/api/config")).json();
   presets = cfg.presets;
   $("area").innerHTML = presets.map((p, i) => `<option value="${i}">${esc(p.name)}</option>`).join("");
   $("llm").checked = cfg.llm_default;
-  $("model").textContent = `(${cfg.model}, runs on this laptop)`;
+  const q = new URLSearchParams(location.search);  // a search lives in the URL: ?area=3&radius=1.5&agent=0&need=...
+  if (q.has("area")) $("area").value = q.get("area");
+  if (q.has("radius")) $("radius").value = q.get("radius");
+  if (q.has("need")) $("request").value = q.get("need");
+  if (q.has("agent")) $("llm").checked = q.get("agent") === "1";
+  if (q.has("area")) $("form").requestSubmit();
 }
 
-function chip(c) {
-  const name = CHECK_NAMES[c.check] || c.check;
-  if (c.reason === "no data") return `<span class="chip nodata" title="${esc(c.note)}">${name}: no data = fail</span>`;
-  if (c.reason === "bad measurement") return `<span class="chip nodata" title="${esc(c.note)}">${name}: unreliable (${c.value} in) = fail</span>`;
-  const sym = c.status === "pass" ? "&#10003;" : "&#10007;";
-  const cmp = c.status === "pass" ? "&ge;" : "&lt;";
-  return `<span class="chip ${c.status}" title="${esc(c.note)}">${sym} ${name}: ${c.value} in (${cmp} ${c.threshold})</span>`;
-}
-
-function extraHtml(extra) {
-  return Object.entries(extra || {}).map(([need, r]) => {
-    if (r.status === "listing says" && r.evidence && r.evidence.length) {
-      const e = r.evidence[0];
-      return `<p class="quote"><span class="chip info">${esc(need)}: listing says</span> <b>"${esc(e.phrase)}"</b> &hellip;${esc(e.context)}&hellip;</p>`;
+/* ---------- the agent's steps, in plain words ---------- */
+function plain(line) {
+  let m;
+  if ((m = line.match(/^\[step \d+\] (\w+)\((.*)\) -> (.*?)(\s+\(llm.*)?$/))) {
+    const [, tool, args, out] = m;
+    if (tool === "set_requirements") return "Worked out what to measure: hallways, doorways and bathroom turning space.";
+    if (tool === "set_extra_needs") return `Noted what the scan can't measure (${esc(out.replace(/^extra needs: /, ""))}). It will look for those in the listing text.`;
+    if (tool === "search_area") {
+      const r = args.match(/radius_km=([\d.]+)/), b = out.match(/(\d+) buildings/);
+      return `Measured ${b ? b[1] : "the"} buildings within ${r ? r[1] : "the chosen"} km from their scans.`;
     }
-    return `<p class="quote"><span class="chip info">${esc(need)}: information unavailable</span></p>`;
+    if (tool === "inspect_building") return `Checked the other units of ${esc(out.split(":")[0])} for a missing measurement.`;
+    if (tool === "search_listing_text") {
+      const need = (args.match(/need="([^"]+)"/) || [])[1] || "a feature";
+      const f = out.match(/(\d+) of (\d+) listing says/);
+      if (/STOPPED|ERROR/.test(out)) return { warn: true, text: `Skipped a repeat search for ${esc(need)}.` };
+      return f ? `Read the listing text for “${esc(need)}”: ${f[1]} of ${f[2]} homes mention it.` : `Read the listing text for “${esc(need)}”.`;
+    }
+    if (tool === "finish") return "Picked the homes worth a visit.";
+    return null;
+  }
+  if ((m = line.match(/^(\d+) candidates within ([\d.]+) km/))) return `Found ${m[1]} scanned homes within ${m[2]} km.`;
+  if ((m = line.match(/agent stopped: (.*)/))) return { warn: true, text: `The AI agent stopped (${esc(m[1])}). These are the measured results.` };
+  if (/extra-needs text search failed/.test(line)) return { warn: true, text: "Couldn't read the listing text, so those needs are unknown." };
+  return null;
+}
+
+function renderLog(log, done) {
+  const items = log.map(plain).filter(Boolean);
+  $("logbox").hidden = !items.length && done;
+  $("log").innerHTML = items.map((it, i) => {
+    const t = typeof it === "string" ? { text: it } : it;
+    const cls = t.warn ? "warn" : (!done && i === items.length - 1 ? "now" : "");
+    return `<li class="${cls}"><span class="n">${i + 1}</span><span>${t.text}</span></li>`;
+  }).join("") || `<li class="now"><span class="n">1</span><span>Starting&hellip;</span></li>`;
+}
+
+/* ---------- the list ---------- */
+function cell(c) {
+  if (!c) return `<span class="fig none">&mdash;</span>`;
+  if (c.reason === "no data") return `<span class="fig none">no data</span>`;
+  if (c.reason === "bad measurement") return `<span class="fig none">unreliable</span>`;
+  return `<span class="fig ${c.status === "fail" ? "miss" : ""}">${Math.round(c.value)} in</span>`;
+}
+const byName = (b, k) => b.checks.find((c) => c.check === k);
+function listingSays(b) {
+  const said = Object.entries(b.extra || {}).filter(([, r]) => r.status === "listing says").map(([n]) => n);
+  return said.length ? `<span class="said">Listing mentions ${esc(said.join(" and "))}</span>` : "";
+}
+function where(b) {
+  const a = (b.address || "").replace(/,?\s*US$/, "").trim();
+  if (!a || a === "US") return b.city || "";
+  return b.city && !a.toLowerCase().includes(b.city.toLowerCase()) ? `${a}, ${b.city}` : a;
+}
+
+function renderList(t) {
+  rows = t.ranked || [];
+  const n = rows.filter((b) => b.passes).length;
+  $("summary").innerHTML = `<span class="count">${n}</span> of ${rows.length} fit every measured check`;
+  $("notes").innerHTML = t.notes && !t.notes_withheld ? `<p class="notes">${esc(t.notes)}</p>` : "";
+  if (!rows.length) { $("list").innerHTML = `<p class="empty">No scanned homes in this area. Try a wider radius.</p>`; return; }
+  $("list").innerHTML = `<table class="table"><thead><tr><th class="c-thumb"><span class="visually-hidden">Photo</span></th><th>Home</th>
+    <th class="c-hall">Hallway</th><th>Doorway</th><th class="c-turn">Turning</th><th>Verdict</th></tr></thead><tbody>
+    ${rows.map((b, i) => `<tr tabindex="0" data-i="${i}" aria-selected="false">
+      <td class="c-thumb"><img class="thumb" loading="lazy" alt="" src="/api/thumb/${esc(b.recommended_unit || b.sid)}" onerror="this.style.visibility='hidden'"></td>
+      <td><span class="name">${esc(b.name)}</span><span class="addr">${esc(where(b) || `${b.dist_km.toFixed(1)} km away`)}</span>${listingSays(b)}</td>
+      <td class="c-hall">${cell(byName(b, "hallway"))}</td><td>${cell(byName(b, "door"))}</td><td class="c-turn">${cell(byName(b, "turning"))}</td>
+      <td>${b.error ? `<span class="tag tag--out">Not loaded</span>` : b.passes ? `<span class="tag tag--in">Fits</span>` : `<span class="tag tag--out">Doesn't fit</span>`}</td></tr>`).join("")}
+    </tbody></table>`;
+}
+
+function skeleton() {
+  $("list").innerHTML = `<table class="table skel" aria-hidden="true"><tbody>${Array.from({ length: 6 }, () =>
+    `<tr><td class="c-thumb"><div class="tall"></div></td><td><div style="width:60%"></div></td><td class="c-hall"><div></div></td><td><div></div></td><td class="c-turn"><div></div></td><td><div style="width:3rem"></div></td></tr>`).join("")}</tbody></table>`;
+}
+
+/* ---------- the detail: floor plan drawn from the scan ---------- */
+function planSvg(floor, doors) {
+  const xs = floor.walls.flatMap((w) => [w[0], w[2]]), ys = floor.walls.flatMap((w) => [w[1], w[3]]);
+  const pad = 0.9, x0 = Math.min(...xs) - pad, x1 = Math.max(...xs) + pad, y0 = Math.min(...ys) - pad, y1 = Math.max(...ys) + pad;
+  const Y = (y) => (y1 - y), W = x1 - x0, H = y1 - y0;
+  const k = Math.max(1, Math.max(W, H) / 12);  // labels and strokes grow with the plan, so a big house stays readable
+  const walls = floor.walls.map((w) => `<line class="wall" stroke-width="${0.11 * k}" x1="${w[0] - x0}" y1="${Y(w[1])}" x2="${w[2] - x0}" y2="${Y(w[3])}"/>`).join("");
+  const marks = doors.filter((d) => d.floor === floor.id).map((d) => {
+    const [[ax, ay], [bx, by]] = d.wall, L = Math.hypot(bx - ax, by - ay) || 1, ux = (bx - ax) / L, uy = (by - ay) / L;
+    const half = d.width_in / 39.37 / 2, cx = d.center[0], cy = d.center[1];
+    const gap = `<line class="gap" stroke-width="${0.2 * k}" x1="${cx - ux * half - x0}" y1="${Y(cy - uy * half)}" x2="${cx + ux * half - x0}" y2="${Y(cy + uy * half)}"/>`;
+    const txt = String(Math.round(d.width_in)), tw = (0.22 + 0.19 * txt.length) * k, th = 0.4 * k, ok = d.status === "pass";
+    const lbl = `<g class="lbl ${ok ? "in" : ""}"><rect x="${cx - x0 - tw / 2}" y="${Y(cy) - th / 2}" width="${tw}" height="${th}" rx="${th / 2}" stroke-width="${0.03 * k}"/>
+      <text x="${cx - x0}" y="${Y(cy)}" font-size="${0.27 * k}">${txt}</text></g>`;
+    const label = `Doorway ${Math.round(d.width_in)} inches, ${ok ? "fits" : d.status === "fail" ? "too narrow" : "unreliable measurement"}`;
+    return gap + (d.photo ? `<a href="#door-${esc(d.photo)}" aria-label="${label}">${lbl}</a>` : `<g role="img" aria-label="${label}">${lbl}</g>`);
   }).join("");
+  return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(floor.label)} floor plan">${walls}${marks}</svg>`;
 }
 
-function card(b) {
-  const fails = b.checks.filter((c) => c.status === "fail").length;
-  const ok = b.passes;
-  const units = b.units.length > 1 ? ` &middot; ${b.units.length} scanned units` : "";
-  const verdict = b.error ? "Could not load" : ok ? "Passes every measured check" : `Fails ${fails} of ${b.checks.length} checks`;
-  return `<article class="card ${ok ? "ok" : "bad"}" id="card-${esc(b.sid)}">
-    <div class="card-top"><div><span class="meta">${esc(b.label)}</span> <span class="name">${esc(b.name)}</span>
-      <div class="meta">${b.dist_km.toFixed(2)} km away${units}</div></div>
-      <span class="verdict ${ok ? "ok" : "bad"}">${verdict}</span></div>
-    ${b.error ? `<p class="quote">${esc(b.error)}</p>` : `<div class="chips">${b.checks.map(chip).join("")}</div>`}
-    ${extraHtml(b.extra)}
-    <div class="card-actions"><button class="ghost" data-sid="${esc(b.recommended_unit || b.sid)}">See the evidence</button>
-      ${b.recommended_unit && b.recommended_unit !== b.sid ? `<span class="meta">Best unit to visit: ${esc(b.units.find((u) => u.sid === b.recommended_unit)?.name || "")}</span>` : ""}</div>
-    <div class="evidence" hidden></div>
-  </article>`;
+async function showDetail(i) {
+  const b = rows[i];
+  document.querySelectorAll(".table tbody tr").forEach((r) => r.setAttribute("aria-selected", r.dataset.i == i ? "true" : "false"));
+  const sid = b.recommended_unit || b.sid;
+  const facts = b.checks.map((c) => {
+    const v = c.reason === "measured" ? `${Math.round(c.value)} in` : c.reason === "no data" ? "no data" : "unreliable";
+    const why = c.reason === "no data" ? "The scan has no measurement for this, so it counts as a fail." :
+      c.reason === "bad measurement" ? "The scan's measurement is implausible, so it counts as a fail." :
+      c.status === "pass" ? `Fits: needs ${c.threshold} in.` : `Too small: needs ${c.threshold} in.`;
+    return `<li><span>${NAMES[c.check]}</span><span class="fig ${c.status === "fail" && c.reason === "measured" ? "miss" : ""}">${v}</span><span class="why">${why}</span></li>`;
+  }).join("");
+  const said = Object.entries(b.extra || {}).map(([need, r]) => r.status === "listing says" && r.evidence.length
+    ? `<p class="quote">${esc(need)}: <q>${esc(r.evidence[0].context.trim())}</q></p>`
+    : `<p class="quote muted">${esc(need)}: the listing doesn't say.</p>`).join("");
+  $("detail").innerHTML = `<h2>${esc(b.name)}</h2><p class="muted">${esc(where(b) || `${b.dist_km.toFixed(1)} km away`)}</p>
+    ${b.passes ? `<span class="tag tag--in">Fits every measured check</span>` : `<span class="tag tag--out">Doesn't fit</span>`}
+    <ul class="facts">${facts}</ul>
+    ${said ? `<h3>What the listing says</h3>${said}` : ""}
+    <h3>Floor plan</h3><div id="plan"><p class="loading-line">Drawing the floor plan from the scan&hellip;</p></div>`;
+  try {
+    const r = await fetch(`/api/evidence/${sid}`); const ev = await r.json();
+    if (rows[i] !== b || !document.getElementById("plan")) return;
+    if (!r.ok) throw new Error(ev.error);
+    const shots = ev.doors.filter((d) => d.photo);
+    $("plan").innerHTML = (ev.floors || []).map((f) => `${ev.floors.length > 1 ? `<p class="floor-name">${esc(f.label)}</p>` : ""}<figure class="plan">${planSvg(f, ev.doors)}</figure>`).join("")
+      + `<p class="muted">Each gap is a doorway, labelled with its width in inches. Teal fits a wheelchair (32 in or more).</p>`
+      + (shots.length ? `<h3>The doorways that don't fit</h3><div class="shots">${shots.map((d) => `<figure id="door-${esc(d.photo)}"><img loading="lazy" src="/evidence/${sid}/${d.photo}" alt="Doorway ${Math.round(d.width_in)} inches wide">
+          <figcaption>${Math.round(d.width_in)} in, seen from ${d.photo_from.distance_m} m away</figcaption></figure>`).join("")}</div>` : "")
+      + `<p class="muted">${esc(ev.note)}</p>`;
+  } catch (e) {
+    $("plan").innerHTML = `<p class="error">The floor plan couldn't be loaded: ${esc(e.message)}</p>`;
+  }
 }
 
-async function showEvidence(btn) {
-  const box = btn.closest(".card").querySelector(".evidence");
-  if (!box.hidden && box.dataset.loaded) { box.hidden = true; btn.textContent = "See the evidence"; return; }
-  box.hidden = false; btn.textContent = "Hide the evidence";
-  if (box.dataset.loaded) return;
-  box.innerHTML = `<p class="meta"><span class="spinner"></span> Reading the 3D scan: floor plans and doorway photos&hellip;</p>`;
-  const sid = btn.dataset.sid;
-  const r = await fetch(`/api/evidence/${sid}`);
-  const ev = await r.json();
-  if (!r.ok) { box.innerHTML = `<p class="banner">Evidence unavailable: ${esc(ev.error)}</p>`; return; }
-  const doors = ev.doors.filter((d) => d.photo);
-  const n = (s) => ev.doors.filter((d) => d.status === s).length;
-  box.innerHTML = `
-    <div class="legend"><span><i class="dot" style="background:var(--pass)"></i>doorway &ge; 32 in (${n("pass")})</span>
-      <span><i class="dot" style="background:var(--fail)"></i>too narrow (${n("fail")})</span>
-      <span><i class="dot" style="background:#999"></i>unreliable measurement (${n("bad measurement")})</span></div>
-    <div class="plans">${ev.plans.map((p) => `<figure><img src="/evidence/${sid}/${p.image}" alt="Floor plan of ${esc(p.floor)} with doorways marked"><figcaption>${esc(p.floor)} floor plan from the scan</figcaption></figure>`).join("")}</div>
-    ${doors.length ? `<div class="doors">${doors.map((d) => `<figure><img loading="lazy" src="/evidence/${sid}/${d.photo}" alt="Doorway ${d.width_in} inches wide">
-        <figcaption><b>${d.width_in} in</b> doorway, ${esc(d.floor_label)} &middot; seen from scan spot ${esc(d.photo_from.pano_label)}, ${d.photo_from.distance_m} m away</figcaption></figure>`).join("")}</div>` : `<p class="meta">No failing doorways to photograph.</p>`}
-    <p class="meta" style="margin-top:8px">${esc(ev.note)}</p>`;
-  box.dataset.loaded = "1";
-}
-
-function renderSteps(log) {
-  $("steps").innerHTML = log.map((l) => {
-    const cls = /^\[step|^Agent:|candidates within/.test(l) ? "step" : /unavailable|stopped|ERROR|failed/i.test(l) ? "warn" : "";
-    return `<span class="${cls}">${esc(l)}</span>`;
-  }).join("\n");
-  $("steps").scrollTop = $("steps").scrollHeight;
-}
-
-function renderResult(t) {
-  const ranked = t.ranked || [];
-  const npass = ranked.filter((b) => b.passes).length;
-  const banner = t.outcome === "fallback" ? `<p class="banner">${esc(t.reason)}: showing measurement-based results.</p>` : "";
-  const notes = t.notes && !t.notes_withheld ? `<div class="notes"><b>Agent notes</b> (not a verdict): ${esc(t.notes)}</div>` : "";
-  $("results").innerHTML = `${banner}<p class="summary">${npass} of ${ranked.length} buildings pass every measured check.</p>${notes}
-    <div class="cards">${ranked.map(card).join("")}</div>`;
-}
+$("list").addEventListener("click", (e) => { const tr = e.target.closest("tr[data-i]"); if (tr) showDetail(+tr.dataset.i); });
+$("list").addEventListener("keydown", (e) => { const tr = e.target.closest("tr[data-i]"); if (tr && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); showDetail(+tr.dataset.i); } });
 
 $("form").onsubmit = async (e) => {
   e.preventDefault();
   const p = presets[$("area").value];
-  $("go").disabled = true; $("go").textContent = "Searching...";
-  $("results").innerHTML = `<p class="empty"><span class="spinner"></span> Measuring listings&hellip;</p>`;
-  $("steps").textContent = "";
+  history.replaceState(null, "", "?" + new URLSearchParams({ area: $("area").value, radius: $("radius").value, agent: $("llm").checked ? "1" : "0", need: $("request").value }));
+  $("go").disabled = true; $("go").textContent = "Measuring…";
+  $("logbox").hidden = false; renderLog([], false); skeleton(); $("summary").textContent = ""; $("notes").innerHTML = "";
+  $("detail").innerHTML = `<p class="muted">Choose a home to see its floor plan, with every doorway measured.</p>`;
   try {
     const r = await fetch("/api/search", { method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ request: $("request").value, lat: p.lat, lon: p.lon, radius_km: +$("radius").value, limit: +$("limit").value, use_llm: $("llm").checked }) });
+      body: JSON.stringify({ request: $("request").value, lat: p.lat, lon: p.lon, radius_km: +$("radius").value, limit: 10, use_llm: $("llm").checked }) });
     const { job, error } = await r.json();
     if (!job) throw new Error(error);
     for (;;) {
       await new Promise((res) => setTimeout(res, 700));
       const s = await (await fetch(`/api/job/${job}`)).json();
-      renderSteps(s.log); $("elapsed").textContent = `${s.elapsed_s}s`;
-      if (s.status === "done") { renderResult(s.result); break; }
-      if (s.status === "error") { $("results").innerHTML = `<p class="banner">Search failed: ${esc(s.error)}</p>`; break; }
+      renderLog(s.log, s.status !== "running"); $("elapsed").textContent = `${Math.round(s.elapsed_s)} s`;
+      if (s.status === "done") { renderList(s.result); if (rows.length) showDetail(0); break; }
+      if (s.status === "error") throw new Error(s.error);
     }
   } catch (err) {
-    $("results").innerHTML = `<p class="banner">Search failed: ${esc(err.message)}</p>`;
+    $("list").innerHTML = `<p class="error">The search didn't finish: ${esc(err.message)}. Try again, or turn off the AI agent.</p>`;
   } finally {
     $("go").disabled = false; $("go").textContent = "Find homes";
   }
 };
-$("results").addEventListener("click", (e) => { const b = e.target.closest("button[data-sid]"); if (b) showEvidence(b); });
 init();
 </script>
 </body>
