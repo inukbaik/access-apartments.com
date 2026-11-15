@@ -87,3 +87,27 @@ or **information unavailable** (not mentioned, or no CoStar record). Unavailable
   "Evidence" section.
 - Data caveat: in this kit no listing text contains a roll-in shower phrase; grab bars, step-free
   entry and "Wheelchair Access" highlights do occur.
+
+## Building info (informational, never ranked)
+
+```
+.venv/bin/python -m finder.screen --lat 34.0242 --lon -118.2991 --radius-km 1.5 --limit 10 --building-info
+.venv/bin/python -m finder.costar_facts --rebuild     # rebuild cache/finder/costar_facts.json
+.venv/bin/python finder/test_building_info.py         # made-up data, no network
+```
+
+Adds a "Building" column and one line per building: how many stories and whether there is an elevator.
+Computed after the ranking is final, only for the shown buildings, stored under `building_info` (also
+`out/finder/building_info.json`). It is not a check and never changes pass/fail or order.
+
+- Stories: CoStar (`numStoriesAboveGrade`, residential `storiesTotal`) against Vexcel roof height
+  (`finder/vexcel.py`, key `VEXCEL_API_KEY` in `.env`). Only the building footprint that contains the
+  point on the newest ortho capture counts; no footprint or an implausible height = unavailable.
+  Height gives a range of height / 4.0 to height / 2.7 stories. Result: agree, disagree (also when CoStar
+  records conflict), CoStar only, Vexcel only or unavailable, always naming the source.
+- Elevator (CoStar only): passenger elevator record or `hasElevator` true = yes; passenger "does not
+  exist" = "CoStar records no passenger elevator"; listing text via the `needs.py` catalog = mentioned;
+  yes and no together = disagree. Residential `hasElevator` false, freight-only and missing data are
+  "information unavailable", never "no elevator".
+- Vexcel results are cached in `cache/finder/vexcel/`. After one network or auth failure Vexcel is skipped
+  for the rest of the run.
