@@ -108,11 +108,34 @@ def main():
     ap.add_argument("--index", default="data/models_index.csv")
     ap.add_argument("--refresh", action="store_true", help="ignore the cache and re-fetch")
     ap.add_argument("--out-dir", default="out/finder")
+    ap.add_argument("--building-info", action="store_true",
+                    help="add informational stories / elevator info per building (never affects ranking)")
     args = ap.parse_args()
 
     ranked, n = screen_area(args.lat, args.lon, args.radius_km, args.limit, args.refresh,
                             args.index, args.out_dir, full=True)
-    print_table(ranked)
+    if args.building_info:
+        from finder import building_info, costar_facts, costar_text, vexcel
+        try:
+            facts = costar_facts.load_facts()
+        except RuntimeError as e:
+            print(f"CoStar facts unavailable: {e}")
+            facts = {}
+        try:
+            tindex = costar_text.load_index()
+        except RuntimeError:
+            tindex = None
+        n0 = vexcel.calls()
+        building_info.annotate(ranked, facts, tindex)
+        print_table(ranked, extra=(["Building"], [[r["building_info"]["short"]] for r in ranked]))
+        print("\nBuilding info (informational only; not part of pass/fail or ranking):")
+        for n, r in enumerate(ranked, 1):
+            print(f"{n:>2}  {r['building_info']['message']}")
+        with open(os.path.join(args.out_dir, "building_info.json"), "w") as f:
+            json.dump({u["candidate"]["sid"]: r["building_info"] for r in ranked for u in r["units"]}, f, indent=2)
+        print(f"Vexcel calls this run: {vexcel.calls() - n0}")
+    else:
+        print_table(ranked)
     print(f"Wrote {n} files + ranked.json to {args.out_dir}/")
 
 

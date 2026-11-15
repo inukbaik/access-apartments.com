@@ -31,7 +31,8 @@ a fail (with the reason) where data is missing. Needed whatever happens with the
 5. [ ] Then (PROJECT_CONTEXT.md §7):
    - [ ] 5b. Agent loop on a local model (Ollama; no paid API key, sponsor data stays on the
      laptop). Model choice in progress.
-   - [ ] 5a. Vexcel entrance / parking check (try the server-side SAM 3 endpoint `/v2/elements/detect`).
+   - [ ] 5a. Building info: stories (CoStar + Vexcel roof height, cross-referenced) and elevator status (CoStar),
+     informational only (`--building-info`; never a check, never changes ranking).
    - [ ] 5c. Evidence report per listing (floor plan, panorama crops, aerial crop).
 
 **Done when (1–4, met):** one command prints a ranked list for an LA point with pass / fail per check and the reason for each fail (measured, no data, bad measurement).
@@ -39,6 +40,11 @@ a fail (with the reason) where data is missing. Needed whatever happens with the
 **Demo point:** USC / W 36th St, LA:
 `.venv/bin/python -m finder.screen --lat 34.0242 --lon -118.2991 --radius-km 1.5 --limit 10`
 (4 of 10 buildings pass all checks; the rest show each fail reason.)
+
+**Demo point, building info:** Echo Park / downtown edge, LA:
+`.venv/bin/python -m finder.screen --lat 34.0705 --lon -118.2491 --radius-km 1.5 --limit 10 --building-info`
+(1 of 10 passes all checks; elevator status shows every kind: confirmed by a CoStar record, mentioned
+in listing text, information unavailable; stories cross-checked with Vexcel roof height.)
 
 **Findings so far** (800-listing survey, LA + Houston): doors are the bottleneck (only 4% of
 listings measure ≥ 32 in on every doorway); 7 listings pass all three checks.
