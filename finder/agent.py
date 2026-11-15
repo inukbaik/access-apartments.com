@@ -161,7 +161,7 @@ def _argtext(args):
     return ", ".join(f"{k}={json.dumps(v)}" for k, v in args.items() if k != "notes")[:90]
 
 
-def run_agent(backend, request, ctx, max_steps=14, time_budget=120, call_timeout=45, log=print):
+def run_agent(backend, request, ctx, max_steps=16, time_budget=120, call_timeout=45, log=print):
     """Run the loop. Returns AgentResult (finished True/False; reason says why not). Whatever was
     searched before a failure stays in ctx, so the caller can still show the merged results."""
     res = AgentResult()
@@ -231,6 +231,9 @@ def run_agent(backend, request, ctx, max_steps=14, time_budget=120, call_timeout
                 log(f"[step {step}] {c['name']}({_argtext(args)}) -> repeated identical call")
                 return fallback("repeated identical tool call")
             seen.add(key)
+            if result is None and c["name"] == "finish" and isinstance(args, dict) and not isinstance(args.get("notes"), str):
+                n = args.get("notes")  # small models send a list of sentences, or nothing: accept both
+                args["notes"] = " ".join(map(str, n)) if isinstance(n, list) else "" if n is None else str(n)
             if result is None:
                 result = call_tool(ctx, c["name"], args)
             tool_s = time.monotonic() - t2
@@ -344,7 +347,7 @@ def _ranked_json(ranked, keys, labels, ex, passes, required):
     return out
 
 
-def answer(request, lat, lon, radius_km, limit, backend=None, refresh=False, max_steps=14, time_budget=120,
+def answer(request, lat, lon, radius_km, limit, backend=None, refresh=False, max_steps=16, time_budget=120,
            call_timeout=45, out_dir="out/finder", screen=None, log=print, text_index=None):
     """Run the agent (if backend) and print the final result. Never raises for LLM trouble;
     the table always comes from our own checks. Returns the AgentResult (or None with no backend)."""

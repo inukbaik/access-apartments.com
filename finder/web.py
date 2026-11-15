@@ -2,6 +2,7 @@
 
     .venv/bin/python -m finder.web                 # http://localhost:8800
     .venv/bin/python -m finder.web --no-llm        # measurement-based results only (no Ollama)
+    .venv/bin/python -m finder.web --warm          # load every preset area into the caches first
 
 Endpoints:
     GET  /                          the page (finder/static/index.html)
@@ -102,12 +103,28 @@ class App:
                 job.log.append(traceback.format_exc(limit=3))
                 job.status = "error"
 
+    def warm(self, radius_km=1.5, limit=10):
+        """Run every preset once without the agent and build its evidence, so the demo loads from cache."""
+        for p in PRESETS:
+            job = Job()
+            self._run(job, {"request": "wheelchair accessible", "lat": p["lat"], "lon": p["lon"],
+                            "radius_km": radius_km, "limit": limit, "use_llm": False})
+            rows = (job.result or {}).get("ranked") or []
+            print(f"warm: {p['name']}: {job.status}, {len(rows)} homes {job.error or ''}", flush=True)
+            for b in rows:
+                sid = b.get("recommended_unit") or b["sid"]
+                try:
+                    self.evidence(sid)
+                    evidence.thumbnail(sid)
+                except Exception as e:  # a home without photos still shows its measurements
+                    print(f"warm:   {sid}: {type(e).__name__}: {e}", flush=True)
+
     def evidence(self, sid):
         path = os.path.join(evidence.OUT, sid, "evidence.json")
         if os.path.exists(path):
             with open(path) as f:
                 ev = json.load(f)
-            if ev.get("photos") == "all":  # older builds photographed failing doors only
+            if ev.get("photos") == "all" and ev.get("render") == evidence.RENDER:  # else an older build: redo
                 return ev
         with self.evidence_lock:
             return evidence.build(sid, photos="all")
@@ -184,8 +201,11 @@ def main():
     ap.add_argument("--model", default=os.environ.get("FINDER_LLM_MODEL") or DEFAULT_MODEL)
     ap.add_argument("--api-key-env", default="FINDER_LLM_API_KEY")
     ap.add_argument("--call-timeout", type=float, default=45)
+    ap.add_argument("--warm", action="store_true", help="first load every preset area into the caches (run before a demo)")
     a = ap.parse_args()
     app = App(not a.no_llm, a.base_url, a.model, os.environ.get(a.api_key_env, ""), a.call_timeout)
+    if a.warm:
+        app.warm()
     server = ThreadingHTTPServer((a.host, a.port), make_handler(app))
     print(f"Finder demo on http://{a.host}:{a.port}/  (agent: {'off' if a.no_llm else a.model + ' at ' + a.base_url})")
     server.serve_forever()

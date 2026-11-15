@@ -23,6 +23,23 @@ Raw API data is cached in `cache/finder/` (use `--refresh` to re-fetch).
 - One listing per building, decided in this order (see `buildings.py`): (1) `street_key` of the address, (2) `street_key` of the name, (3) `costar_property_id`, (4) a "<building> - <unit>" name prefix within 50 m, (5) lat/lon within 15 m. `street_key` parses with `usaddress` and keeps house number (with fractions like "1286 1/2"), pre-direction and street name; it drops street type, unit, city and zip, and returns None for unit descriptions ("2BR, 1BA", "Studio"). Same key but over 150 m apart is not merged. When unsure, do not merge: a wrong merge can hide a failing unit. Other units shown as `+N`.
 - Ranking: fewest fails, then fewest "no data", then nearest. Listings that failed to load go last.
 
+## Web page
+
+```
+.venv/bin/python -m finder.web --warm       # http://localhost:8800 ; --warm loads every preset area first
+.venv/bin/python -m finder.web --no-llm     # AI agent off by default (measurements only)
+```
+
+Pick an area, press Find homes. The list shows the three measurements per building; a click shows
+the floor plan drawn from the scan (every doorway labelled with its width), a photo of each doorway
+rendered from the nearest panorama (`evidence.py`), and what the listing text says. Images are cached
+in `out/evidence/`; the first click on an uncached home takes several seconds, so run `--warm` before
+a demo. Standard library server, one search at a time, bound to 127.0.0.1.
+
+Doorways into a room the scan classifies as a closet or pantry are shown in grey and not counted
+(`checks.storage_edges`). A doorway into an unclassified room still counts. Shared amenity scans
+("Pool", "Fitness Center", ...) are left out of the candidates (`candidates.NOT_A_HOME`).
+
 ## Agent
 
 An LLM plans which tools to call; our code does the measuring and the ranking. Any OpenAI-compatible
@@ -43,7 +60,7 @@ server works (Ollama `/v1`, Gemini, Groq, OpenAI, LM Studio, vLLM). Tools live i
 - Verdicts come only from `checks.py`. The model never decides pass/fail and cannot drop a check.
   Its notes print under "Agent notes (not a verdict)" and are withheld if they claim a failing
   building passes.
-- Fails fast: 3 s preflight (`GET /models`), 45 s per LLM call, 120 s total, 12 steps, stop after 2
+- Fails fast: 3 s preflight (`GET /models`), 45 s per LLM call, 120 s total, 16 steps, stop after 2
   invalid tool calls in a row or an identical repeated call. If nothing (left) is worth inspecting the
   run finishes without asking the model again (so the model's notes appear only when it calls `finish` itself).
 - Fallback: on any of those, or any LLM error, you get a one-line banner (`AI agent unavailable

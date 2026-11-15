@@ -5,10 +5,12 @@ failing doorway rendered from the nearest Matterport panorama that can see it.
 
 Geometry: wall edges have two vertices; an opening sits at `relativeCenter` (0..1) along its edge.
 Panoramas share that x/y frame. A skybox's faces are in the panorama's own frame; `rotation`
-(a quaternion, z up) turns them into the model frame. Face convention checked on test doors:
-faces 1..4 go around the horizon turning right, face 1 looks along local +y (FACE1_DEG = 90), and
-the quaternion maps model -> panorama directions as R^T applied to row vectors (rays @ R.T).
-Checked by aiming at doorways 0.5 m from a panorama: within about 15 degrees.
+(a quaternion, z up) turns them into the model frame: a panorama direction d points along R d in
+the model, so model rays go to the panorama frame as R^T ray (rays @ R with row vectors). Faces
+1..4 go around the horizon turning right and face 1 looks along local +x (FACE1_DEG = 0).
+Checked on windows seen from panoramas with headings near 90 and 190 degrees: within a few degrees.
+Only the four horizon faces are used, so the view is 5:3 (it never looks further up or down than
+those faces cover).
 """
 import argparse
 import json
@@ -23,11 +25,13 @@ from PIL import Image, ImageDraw
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "scripts"))
 from mp_common import graph  # noqa: E402
 
-from finder.checks import DOOR_MIN_IN, DOOR_PLAUSIBLE_MIN_IN, M_TO_IN  # noqa: E402
+from finder.checks import DOOR_MIN_IN, DOOR_PLAUSIBLE_MIN_IN, M_TO_IN, storage_edges  # noqa: E402
+from finder.matterport import FetchError, fetch_model  # noqa: E402
 
 CACHE = "cache/evidence"
 OUT = "out/evidence"
-FACE1_DEG = 90  # local direction of skybox face 1
+FACE1_DEG = 0  # local direction of skybox face 1
+RENDER = 3  # bump when the photos or door fields change: older out/evidence/ builds are rebuilt
 VIEW_MIN_M, VIEW_MAX_M = 0.8, 5.0  # how far a panorama may be from the doorway it shows
 VIEW_BEST_M = 2.2  # preferred distance: the whole door frame fits in the view
 FOV = 100  # wide, so the doorway is in view even when its mapped position is a little off
@@ -94,8 +98,9 @@ def _xy(p):
     return np.array([p["x"], p["y"]], dtype=float)
 
 
-def doorways(model):
-    """Every mapped doorway: floor, center, width and the same pass/fail rule as checks.check_door."""
+def doorways(model, storage=()):
+    """Every mapped doorway: floor, center, width and the same pass/fail rule as checks.check_door.
+    `storage`: edge ids that border a closet or pantry; their doorways get status "storage" (not counted)."""
     out = []
     for floor in model.get("floors") or []:
         for e in floor.get("edges") or []:
@@ -107,7 +112,7 @@ def doorways(model):
                 if o.get("type") != "doorway" or not o.get("width"):
                     continue
                 w = o["width"] * M_TO_IN
-                status = ("bad measurement" if w < DOOR_PLAUSIBLE_MIN_IN
+                status = ("storage" if e["id"] in storage else "bad measurement" if w < DOOR_PLAUSIBLE_MIN_IN
                           else "fail" if w < DOOR_MIN_IN else "pass")
                 t = o.get("relativeCenter")
                 t = 0.5 if t is None else t
@@ -118,7 +123,8 @@ def doorways(model):
 
 
 # ------------------------------------------------------------------ floor plans
-STATUS_COLOR = {"pass": (46, 158, 79), "fail": (208, 64, 52), "bad measurement": (150, 150, 150)}
+STATUS_COLOR = {"pass": (46, 158, 79), "fail": (208, 64, 52), "bad measurement": (150, 150, 150),
+                "storage": (150, 150, 150)}
 
 
 def floor_plan(model, floor, doors, scale=60, pad=0.8):
@@ -153,14 +159,15 @@ def _rot(q):
                      [2 * (x * z - y * w), 2 * (y * z + x * w), 1 - 2 * (x * x + y * y)]])
 
 
-def render_view(faces, rotation, yaw_deg, fov=FOV, size=800):
+def render_view(faces, rotation, yaw_deg, fov=FOV, size=800, aspect=0.6):
     """Perspective view looking along model-frame yaw (degrees from +x, counter-clockwise), level."""
     f = np.tan(np.radians(fov) / 2)
-    j, i = np.meshgrid(np.linspace(-f, f, size), np.linspace(f, -f, size))
+    rows_n = int(size * aspect)  # 0.6 keeps every ray on a horizon face (no top or bottom face needed)
+    j, i = np.meshgrid(np.linspace(-f, f, size), np.linspace(f * aspect, -f * aspect, rows_n))
     yaw = np.radians(yaw_deg)
     fwd, right, up = np.array([np.cos(yaw), np.sin(yaw), 0]), np.array([np.sin(yaw), -np.cos(yaw), 0]), np.array([0, 0, 1.0])
     rays = (fwd + j[..., None] * right + i[..., None] * up).reshape(-1, 3)
-    loc = rays @ _rot(rotation).T  # model frame -> panorama frame (row vectors)
+    loc = rays @ _rot(rotation)  # model frame -> panorama frame: R^T ray, written for row vectors
     out = np.zeros((len(loc), 3), np.uint8)
     H, W = faces[1].shape[:2]
     best = np.full(len(loc), -np.inf)
@@ -175,7 +182,7 @@ def render_view(faces, rotation, yaw_deg, fov=FOV, size=800):
         cols = np.clip(((u + 1) / 2 * W).astype(int), 0, W - 1)
         rows = np.clip(((v + 1) / 2 * H).astype(int), 0, H - 1)
         out[sel] = faces[k + 1][rows, cols]
-    return Image.fromarray(out.reshape(size, size, 3))
+    return Image.fromarray(out.reshape(rows_n, size, 3))
 
 
 def _mark_door(img, door, pos, yaw_deg, fov=FOV):
@@ -261,7 +268,11 @@ def build(sid, refresh=False, out_dir=OUT, photos="fail"):
     """Write plans + door photos to out/evidence/<sid>/ and return a JSON-able summary.
     photos: "fail" (failing and bad-measurement doors) or "all"."""
     model = fetch(sid, refresh)
-    doors = doorways(model)
+    try:  # the same closet / pantry rule as the door check
+        storage = storage_edges(fetch_model(sid).get("rooms"))
+    except FetchError as e:
+        raise EvidenceError(f"{sid}: rooms could not be loaded ({e})")
+    doors = doorways(model, storage)
     d = os.path.join(out_dir, sid)
     os.makedirs(d, exist_ok=True)
     plans = []
@@ -275,7 +286,7 @@ def build(sid, refresh=False, out_dir=OUT, photos="fail"):
             plans.append({"floor": floor["label"], "image": name})
     for n, dr in enumerate(doors):
         dr["photo"] = None
-        if photos == "all" or dr["status"] != "pass":
+        if photos == "all" or dr["status"] not in ("pass", "storage"):
             img, info = door_photo(sid, model, dr)
             if img:
                 name = f"door_{n}.jpg"
@@ -286,8 +297,9 @@ def build(sid, refresh=False, out_dir=OUT, photos="fail"):
                          for e in f.get("edges") or [] if len(e.get("vertices") or []) == 2 and e.get("type") == "wall"]}
               for f in model.get("floors") or []]
     floors = [f for f in floors if f["walls"]]
-    summary = {"sid": sid, "name": model.get("name"), "photos": photos, "plans": plans, "floors": floors, "doors": doors,
+    summary = {"sid": sid, "name": model.get("name"), "photos": photos, "render": RENDER, "plans": plans, "floors": floors, "doors": doors,
                "note": "Door widths come from the scan's mapped openings and may include the frame. "
+                       "Closet and pantry doorways are shown but not counted. "
                        "Photos are rendered from the nearest panorama that can see the doorway."}
     with open(os.path.join(d, "evidence.json"), "w") as f:
         json.dump(summary, f, indent=1)
