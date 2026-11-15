@@ -10,7 +10,7 @@ Update this file when you pick up or finish something. `git pull --rebase` first
 
 | Lane | Owner | Folder | Status |
 |---|---|---|---|
-| A. Finder (listing screener) | Inuk | `finder/` | Starting |
+| A. Finder (listing screener) | Inuk | `finder/` | Core screener done on `feat/finder`; agent loop next |
 | B. Localization + routing | Shane | `localize/` | Phase 0 follow-up runs |
 | C. Glasses app | _unassigned_ | `glasses-app/` | Waiting on the go / no go for B |
 | D. Demo, video, Devpost | _unassigned_ | `docs/` | Not started |
@@ -18,17 +18,33 @@ Update this file when you pick up or finish something. `git pull --rebase` first
 ## A. Finder (Inuk)
 
 Goal: given an area and a user's needs, return listings ranked by accessibility, with evidence and
-"unknown" where data is missing. Needed whatever happens with the glasses.
+a fail (with the reason) where data is missing. Needed whatever happens with the glasses.
 
-1. [ ] Candidate search: models near a lat/lon from `data/models_index.csv` (Houston / LA).
-2. [ ] Per model: rooms + door openings via `scripts/mp_common.graph()`. The queries in
+1. [x] Candidate search: models near a lat/lon from `data/models_index.csv` (Houston / LA).
+2. [x] Per model: rooms + door openings via `scripts/mp_common.graph()`. The queries in
    `scripts/phase0_check.py` (steps 2 and 5) already work; reuse them.
-3. [ ] Checks: hallway ≥ 36 in, door ≥ 32 in, bathroom narrow side ≥ 60 in. Missing data =
-   "unknown". Thresholds are in PROJECT_CONTEXT.md §4.
-4. [ ] Output: JSON per listing (checks, values, evidence ids), then a simple ranked view.
-5. [ ] Then: Vexcel entrance/parking check, agent loop, evidence report (PROJECT_CONTEXT.md §7).
+3. [x] Checks: hallway ≥ 36 in, door ≥ 32 in, bathroom narrow side ≥ 60 in. Uncertainty means
+   failure: missing data = fail ("no data"), implausible value = fail ("bad measurement"). Thresholds are in PROJECT_CONTEXT.md §4.
+4. [x] Output: JSON per listing (checks, values, evidence ids), then a simple ranked view.
+   One row per building (best unit shown, `+N units`); units are grouped by street address
+   parsed with `usaddress` (`finder/buildings.py`). When unsure, units are not merged.
+5. [ ] Then (PROJECT_CONTEXT.md §7):
+   - [ ] 5b. Agent loop on a local model (Ollama; no paid API key, sponsor data stays on the
+     laptop). Model choice in progress.
+   - [ ] 5a. Vexcel entrance / parking check (try the server-side SAM 3 endpoint `/v2/elements/detect`).
+   - [ ] 5c. Evidence report per listing (floor plan, panorama crops, aerial crop).
 
-**Done when:** one command prints a ranked list for an LA point with pass / fail / unknown per check.
+**Done when (1–4, met):** one command prints a ranked list for an LA point with pass / fail per check and the reason for each fail (measured, no data, bad measurement).
+
+**Demo point:** USC / W 36th St, LA:
+`.venv/bin/python -m finder.screen --lat 34.0242 --lon -118.2991 --radius-km 1.5 --limit 10`
+(4 of 10 buildings pass all checks; the rest show each fail reason.)
+
+**Findings so far** (800-listing survey, LA + Houston): doors are the bottleneck (only 4% of
+listings measure ≥ 32 in on every doorway); 7 listings pass all three checks.
+
+**Open questions:** does CoStar allow sending sponsor data to cloud AI models (ask `/ask-costar`)?
+Any free LLM credits from sponsors?
 
 ## B. Localization + routing (Shane)
 
