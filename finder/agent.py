@@ -329,6 +329,21 @@ def print_extra(ex, keys, labels):
         print("No CoStar record:\n" + "\n".join(gaps))
 
 
+def _ranked_json(ranked, keys, labels, ex, passes, required):
+    """The final table as data (for the web page): one entry per building, best first."""
+    out = []
+    for n, (r, key) in enumerate(zip(ranked, keys), 1):
+        c = r["candidate"]
+        u = recommended_unit(r, required) if not r.get("error") else None
+        out.append({"label": labels[n - 1] if labels else f"B{n}", "sid": c["sid"], "name": c["name"],
+                    "dist_km": c["dist_km"], "error": r.get("error"), "checks": r["checks"],
+                    "passes": bool(passes(r)), "recommended_unit": u["candidate"]["sid"] if u else None,
+                    "units": [{"sid": x["candidate"]["sid"], "name": x["candidate"]["name"], "checks": x["checks"],
+                               "error": x.get("error")} for x in r.get("units") or [r]],
+                    "extra": {need: ex.result(need, key) for need in ex.needs}})
+    return out
+
+
 def answer(request, lat, lon, radius_km, limit, backend=None, refresh=False, max_steps=14, time_budget=120,
            call_timeout=45, out_dir="out/finder", screen=None, log=print, text_index=None):
     """Run the agent (if backend) and print the final result. Never raises for LLM trouble;
@@ -411,7 +426,8 @@ def answer(request, lat, lon, radius_km, limit, backend=None, refresh=False, max
                                          for n, rs in ex.results.items()}},
              "searches": ctx.searches, "fetches": ctx.fetches, "inspected": ctx.inspected,
              "recommended": ctx.recommended, "notes": res.notes if res else "", "notes_withheld": withheld,
-             "elapsed_s": round(time.monotonic() - started, 2), "steps": res.steps if res else []}
+             "elapsed_s": round(time.monotonic() - started, 2), "steps": res.steps if res else [],
+             "ranked": _ranked_json(ranked, keys, labels, ex, passes if labels else passes_all, ctx.required)}
     with open(os.path.join(out_dir, "agent_trace.json"), "w") as f:
         json.dump(trace, f, indent=2)
     return res
