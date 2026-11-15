@@ -129,6 +129,26 @@ Computed after the ranking is final, only for the shown buildings, stored under 
 - Vexcel results are cached in `cache/finder/vexcel/`. After one network or auth failure Vexcel is skipped
   for the rest of the run.
 
+## Data validation
+
+Data from the outside is checked for type and shape before we use it (`schemas.py`, pydantic): Matterport
+models (screening and evidence), the Vexcel response and cached Vexcel results, and the LLM server
+replies. Numbers must be real numbers (no strings, no booleans, no NaN). Null stays legal where a check
+treats it as "no data". Value ranges are not checked here: `checks.py` still says "bad measurement".
+
+- Bad Matterport data (fresh or from the cache): `FetchError` / `EvidenceError` with the source and the
+  failing field paths. That listing is ranked last with the error, and nothing bad is written to the cache.
+- Bad Vexcel data for one building: "unavailable (unexpected Vexcel data)", one line printed, not cached.
+  The rest of the run keeps using Vexcel. A bad cached Vexcel file is treated as a cache miss.
+- Bad LLM replies: the same `LLMError` messages as before.
+
+```
+.venv/bin/python -m finder.data_quality              # read-only report on the caches and the index, totals only
+.venv/bin/python -m finder.data_quality --show-ids   # also list Matterport model ids that fail the schema
+.venv/bin/python finder/test_schemas.py              # validation tests, no network
+.venv/bin/mypy                                       # type check (config in mypy.ini)
+```
+
 ## Demo (2 minutes)
 
 **On the web page** (preferred): `.venv/bin/python -m finder.web --warm --no-llm`, wait for

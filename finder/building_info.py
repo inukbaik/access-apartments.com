@@ -35,7 +35,7 @@ def combine_stories(facts, vexcel):
     out = {"costar": costar, "vexcel": None}
     if vx_ok:
         lo, hi = stories_range(vexcel["height_m"])
-        out["vexcel"] = {**vexcel, "lo": lo, "hi": hi}
+        out["vexcel"] = {**vexcel, "lo": lo, "hi": hi}  # type: ignore[assignment]  # out is inferred from its first literal
     date = (vexcel or {}).get("photo_date") or ""
     photo = f" (photo {date[:7]})" if date else ""
     if len(costar) > 1:
@@ -59,7 +59,7 @@ def combine_stories(facts, vexcel):
         text = f"about {_rng(lo, hi)} stories (Vexcel roof height {vexcel['height_m']} m; no CoStar record)"
     else:
         status, text = "unavailable", "Stories: information unavailable"
-    out.update(status=status, text=text)
+    out.update(status=status, text=text)  # type: ignore[call-overload]  # same
     return out
 
 

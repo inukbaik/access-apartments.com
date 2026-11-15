@@ -3,6 +3,7 @@ Run from the repo root: .venv/bin/python finder/test_building_info.py"""
 import copy
 import os
 import sys
+from typing import Any
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from finder import building_info as B, vexcel as V  # noqa: E402
@@ -104,7 +105,7 @@ assert V.select_height(nested, 0.0005, 0.0005)["height_m"] == 9.0
 import requests  # noqa: E402
 import tempfile  # noqa: E402
 
-calls = []
+calls: list[Any] = []
 
 
 def boom(*a, **k):

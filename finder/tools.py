@@ -16,7 +16,7 @@ CORE_CHECKS = ("hallway", "door", "turning")  # always required
 CHECK_NAMES = CORE_CHECKS
 # Registry hook for future checks: name -> fn(unit_record) -> {"status": "pass"|"fail", ...}.
 # Register a name here and the model may require it through set_requirements (5a adds "entrance").
-OPTIONAL_CHECKS = {}
+OPTIONAL_CHECKS = {}  # type: ignore[var-annotated]  # empty registry
 # Bounds the model cannot move.
 RADIUS_RANGE, LIMIT_RANGE, MAX_FROM_ORIGIN_KM = (0.5, 5.0), (5, 20), 10.0
 AREAS = {"LA": (33.5, 34.5, -119.0, -117.5), "Houston": (29.0, 30.5, -96.0, -94.8)}  # lat0 lat1 lon0 lon1
@@ -200,7 +200,7 @@ class ToolContext:
             else:
                 units = {u["candidate"]["sid"]: u for u in self.ids[bid]["units"]}
                 units.update({u["candidate"]["sid"]: u for u in rec["units"]})
-                units = sorted(units.values(), key=sort_key)
+                units = sorted(units.values(), key=sort_key)  # type: ignore[assignment]  # units rebound from dict to list
                 self.ids[bid] = {**units[0], "units": units}
             out.append(bid)
         return out, new
@@ -463,7 +463,7 @@ def _validate(schema, args):
         ok = _TYPES[spec["type"]]
         if isinstance(v, bool) or not isinstance(v, ok):
             return f"argument {k!r} must be of type {spec['type']}"
-        if spec["type"] == "array" and not all(isinstance(x, str) for x in v):
+        if spec["type"] == "array" and not all(isinstance(x, str) for x in v):  # type: ignore[union-attr]  # v checked as array by spec
             return f"argument {k!r} must be a list of strings"
     return None
 
@@ -472,12 +472,12 @@ def call_tool(ctx, name, args):
     """Run a tool by name. Always returns a dict; failures are {"error": ...}."""
     tool = BY_NAME.get(name)
     if tool is None:
-        return {"error": f"unknown tool {name!r}; tools: {', '.join(BY_NAME)}"}
+        return {"error": f"unknown tool {name!r}; tools: {', '.join(BY_NAME)}"}  # type: ignore[arg-type]  # BY_NAME keys are str
     err = _validate(tool["parameters"], args)
     if err:
         return {"error": err}
     try:
-        return tool["fn"](ctx, **args)
+        return tool["fn"](ctx, **args)  # type: ignore[operator]  # tool["fn"] is callable
     except (Exception, SystemExit) as e:  # SystemExit: load_candidates exits when the index is missing
         return {"error": f"{name} failed: {e}"[:300]}
 

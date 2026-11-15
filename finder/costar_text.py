@@ -17,11 +17,12 @@ import os
 import re
 import sys
 import time
+from typing import Any
 
 KIT = "data/costar"
 CACHE = "cache/finder/costar_text.json"
 MAX_TEXT = 6000       # characters kept per text value
-_memo = {}
+_memo: dict[str, Any] = {}
 
 
 def _clean(v):
@@ -42,7 +43,7 @@ class _Fields:
 
 
 def _model_map(path, key_col):
-    out = {}
+    out: dict[str, list[str]] = {}
     with open(path, newline="", encoding="utf-8") as f:
         for row in csv.DictReader(f):
             mid = (row.get("MatterportModelId") or "").strip()
@@ -107,7 +108,8 @@ def _commercial_fields(p):
 
 def build_index(kit=KIT, log=print):
     t0 = time.monotonic()
-    models, records = {}, {}
+    models: dict[str, Any] = {}
+    records: dict[str, Any] = {}
     # Residential: ListingId -> model ids; text from the listing and its features record.
     rmap = _model_map(f"{kit}/residential-listings.csv", "ListingId")
     feats = {str(r["id"]): r for r in _jsonl(f"{kit}/data/residential-listing-features.jsonl")}

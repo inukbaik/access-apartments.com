@@ -5,6 +5,7 @@ Priority: street_key of the address, street_key of the name, costar_property_id,
 When unsure, do not merge: a wrong merge can hide a failing unit behind a passing one.
 """
 import re
+from typing import Any
 
 import usaddress
 
@@ -72,7 +73,7 @@ def _dist_m(a, b):
 
 def _cluster(items, radius_m):
     """Single-linkage clusters: items within radius_m of any member share a cluster."""
-    clusters = []
+    clusters: list[Any] = []
     for it in items:
         near = [c for c in clusters if any(_dist_m(it, m) <= radius_m for m in c)]
         merged = [it]
@@ -86,7 +87,8 @@ def _cluster(items, radius_m):
 def group_buildings(items):
     """Split items (dicts with address, costar_property_id, name, lat, lon) into buildings.
     Returns a list of lists, each in input order."""
-    groups, rest = {}, []
+    groups: dict[Any, list[Any]] = {}
+    rest: list[Any] = []
     for it in items:
         key = street_key(it.get("address"))
         if key:
@@ -103,7 +105,8 @@ def group_buildings(items):
         else:
             rest.append(it)
     out = [g for members in groups.values() for g in _cluster(members, KEY_RADIUS_M)]
-    by_prefix, loose = {}, []
+    by_prefix: dict[Any, list[Any]] = {}
+    loose: list[Any] = []
     for it in rest:
         p = name_prefix(it.get("name"))
         (by_prefix.setdefault(p, []) if p else loose).append(it)
