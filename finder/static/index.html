@@ -384,7 +384,8 @@ async function showDetail(i) {
     const floors = ev.floors || [], nOut = (f) => ev.doors.filter((d) => d.floor === f.id && RANK[d.status] === 0).length;
     const tabs = floors.length > 1 ? `<div class="floors" role="tablist" aria-label="Floors">${floors.map((f, j) =>
       `<button role="tab" data-floor="${esc(f.id)}" aria-selected="${j === 0}">${esc(f.label)}${nOut(f) ? `<span class="n-out">${nOut(f)} narrow</span>` : ""}</button>`).join("")}</div>` : "";
-    $("plan").innerHTML = tabs + floors.map((f, j) => `<figure class="plan" data-plan="${esc(f.id)}" ${j ? "hidden" : ""}>${planSvg(f, ev.doors)}</figure>`).join("")
+    const stairs = floors.length > 1 ? `<p class="notes">This scan has ${floors.length} floors. Stairs between them are not checked.</p>` : "";
+    $("plan").innerHTML = stairs + tabs + floors.map((f, j) => `<figure class="plan" data-plan="${esc(f.id)}" ${j ? "hidden" : ""}>${planSvg(f, ev.doors)}</figure>`).join("")
       + `<p class="key"><span class="k-in">Fits a wheelchair (32 in or more)</span><span class="k-out">Too narrow or unreliable</span>${ev.doors.some((d) => d.status === "storage") ? `<span class="k-st">Closet door, not counted</span>` : ""}</p>`
       + `<p class="muted">Each gap in a wall is a doorway, labelled with its width in inches.${shots.length ? " Click a label to see that doorway." : ""}</p>`
       + (shots.length ? `<h3 id="photos">Doorways</h3><p class="muted">${(() => { const o = shots.filter((d) => RANK[d.status] === 0).length, c = shots.filter((d) => d.status === "storage").length, f = shots.length - o - c, miss = ev.doors.length - shots.length;
