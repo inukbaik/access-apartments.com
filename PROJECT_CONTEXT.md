@@ -82,6 +82,8 @@ Keys: `/costar-keys` in the CoStar Discord → `.env` (see `.env.example`). Data
 - Ortho clip: `POST https://api.vexcelgroup.com/v2/ortho/extract` (WKT polygon, `srid 4326`,
   `layer "urban,urban-r,wide-area,urban-g"`), 7.5 cm/pixel. Also oblique images, elevation,
   parcels, object detection. MCP server: `https://api.vexcelgroup.com/v2/mcp`.
+- Roof height: `GET /v2/property/extract` with `wkt=POINT(lon lat)`, `srid=4326`,
+  `include=precomputed,calculated` returns per-structure footprints and `roof-characteristics.height` (m).
 
 ### CoStar records
 - Password-protected kit (`data/costar/`). Joins to Matterport via CoStar property id
@@ -113,6 +115,8 @@ The agent attaches evidence (floor plan with flagged spots, panorama crops, aeri
 Decision (Sat Nov 14): uncertainty means failure. A check passes only when measured and meeting the threshold; this protects users from being sent to a place they can't use.
 
 Deliberate exception (Sat Nov 14): extra needs the user names (roll-in shower, grab bars, ramp / step-free entry, elevator, wheelchair accessible) are not measured. The core checks stay strict pass/fail. Extra needs are searched in CoStar listing text and reported per building as "listing says" (with the matched phrase and source) or "information unavailable"; never as a pass or a fail. They only reorder buildings within the same measurement group (same fails and no-data count); a building with more failed core checks never moves above one with fewer.
+
+Building info (informational, never ranked): with `--building-info`, each shown building gets its story count and elevator status. Stories cross-reference CoStar (`numStoriesAboveGrade`, residential `storiesTotal`) with Vexcel roof height (only the structure whose footprint contains the point; height divided by 2.7 to 4 m per story gives a range) and say "agree", "disagree" or which source is missing. Elevator status is CoStar only (passenger elevator records, `hasElevator` true, listing text); a missing or false value is "information unavailable", never "no elevator". It is computed after the ranking is final, is never a check, and never changes pass/fail or order.
 
 ---
 
@@ -170,7 +174,7 @@ Part A.
 ### Phase 1: Finder core (Part A), in progress
 - [x] Candidate search near a point from `data/models_index.csv`
 - [x] Pull rooms + door openings; hallway, door and turning-space checks (missing data = fail, "no data")
-- [ ] Vexcel ortho/oblique per address; vision check for entrance steps and accessible parking
+- [ ] Building info: stories (CoStar + Vexcel roof height, cross-referenced) and elevator status (CoStar), informational only
 - [ ] Agent loop that reasons over checks, fails checks with no data, ranks listings
 - [ ] Evidence report: floor plan with flagged spots, panorama crops, aerial crop
 

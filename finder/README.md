@@ -87,3 +87,53 @@ or **information unavailable** (not mentioned, or no CoStar record). Unavailable
   "Evidence" section.
 - Data caveat: in this kit no listing text contains a roll-in shower phrase; grab bars, step-free
   entry and "Wheelchair Access" highlights do occur.
+
+## Building info (informational, never ranked)
+
+```
+.venv/bin/python -m finder.screen --lat 34.0705 --lon -118.2491 --radius-km 1.5 --limit 10 --building-info
+.venv/bin/python -m finder.costar_facts --rebuild     # rebuild cache/finder/costar_facts.json
+.venv/bin/python finder/test_building_info.py         # made-up data, no network
+```
+
+Adds a "Building" column and one line per building: how many stories and whether there is an elevator.
+Computed after the ranking is final, only for the shown buildings, stored under `building_info` (also
+`out/finder/building_info.json`). It is not a check and never changes pass/fail or order.
+
+- Stories: CoStar (`numStoriesAboveGrade`, residential `storiesTotal`) against Vexcel roof height
+  (`finder/vexcel.py`, key `VEXCEL_API_KEY` in `.env`). Only the building footprint that contains the
+  point on the newest ortho capture counts; no footprint or an implausible height = unavailable.
+  Height gives a range of height / 4.0 to height / 2.7 stories. Result: agree, disagree (also when CoStar
+  records conflict), CoStar only, Vexcel only or unavailable, always naming the source.
+- Elevator (CoStar only): passenger elevator record or `hasElevator` true = yes; passenger "does not
+  exist" = "CoStar records no passenger elevator"; listing text via the `needs.py` catalog = mentioned;
+  yes and no together = disagree. Residential `hasElevator` false, freight-only and missing data are
+  "information unavailable", never "no elevator".
+- Vexcel results are cached in `cache/finder/vexcel/`. After one network or auth failure Vexcel is skipped
+  for the rest of the run.
+
+## Demo (2 minutes)
+
+Two runs, both in LA. **Run each once beforehand** so everything loads from `cache/` and takes a
+few seconds. The first run fetches from Matterport and Vexcel live and takes about a minute.
+
+1. **Screening at USC / W 36th St.** 4 of 10 buildings pass all checks. Point out that every fail
+   says why: measured too narrow, "no data", or "bad measurement". Nothing is a guess.
+   ```
+   .venv/bin/python -m finder.screen --lat 34.0242 --lon -118.2991 --radius-km 1.5 --limit 10
+   ```
+2. **Building info at Echo Park / downtown edge.** The building that passes all checks is 3 stories
+   (CoStar and Vexcel roof height agree), and its listing mentions an elevator ("mentioned", not
+   confirmed). Other rows show an elevator confirmed by a CoStar record and "information unavailable".
+   Point out that this information never changes the ranking.
+   ```
+   .venv/bin/python -m finder.screen --lat 34.0705 --lon -118.2491 --radius-km 1.5 --limit 10 --building-info
+   ```
+
+Optional, if a model server is running: the agent on the USC point with a plain-words request (see
+"Agent" above). If it is slow or down, the same table appears under a one-line banner; `--no-llm`
+skips the AI on purpose.
+
+Pre-demo check: `git status` clean, `.env` has the keys, and both runs above finish in about a second
+(cached; the "fetching" lines still print, which is normal) with "Vexcel calls this run: 0" on the
+second. Demo points are also listed in `TASKS.md`.
