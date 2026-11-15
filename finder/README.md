@@ -91,7 +91,7 @@ or **information unavailable** (not mentioned, or no CoStar record). Unavailable
 ## Building info (informational, never ranked)
 
 ```
-.venv/bin/python -m finder.screen --lat 34.0242 --lon -118.2991 --radius-km 1.5 --limit 10 --building-info
+.venv/bin/python -m finder.screen --lat 34.0705 --lon -118.2491 --radius-km 1.5 --limit 10 --building-info
 .venv/bin/python -m finder.costar_facts --rebuild     # rebuild cache/finder/costar_facts.json
 .venv/bin/python finder/test_building_info.py         # made-up data, no network
 ```
@@ -111,3 +111,29 @@ Computed after the ranking is final, only for the shown buildings, stored under 
   "information unavailable", never "no elevator".
 - Vexcel results are cached in `cache/finder/vexcel/`. After one network or auth failure Vexcel is skipped
   for the rest of the run.
+
+## Demo (2 minutes)
+
+Two runs, both in LA. **Run each once beforehand** so everything loads from `cache/` and takes a
+few seconds. The first run fetches from Matterport and Vexcel live and takes about a minute.
+
+1. **Screening at USC / W 36th St.** 4 of 10 buildings pass all checks. Point out that every fail
+   says why: measured too narrow, "no data", or "bad measurement". Nothing is a guess.
+   ```
+   .venv/bin/python -m finder.screen --lat 34.0242 --lon -118.2991 --radius-km 1.5 --limit 10
+   ```
+2. **Building info at Echo Park / downtown edge.** The building that passes all checks is 3 stories
+   (CoStar and Vexcel roof height agree), and its listing mentions an elevator ("mentioned", not
+   confirmed). Other rows show an elevator confirmed by a CoStar record and "information unavailable".
+   Point out that this information never changes the ranking.
+   ```
+   .venv/bin/python -m finder.screen --lat 34.0705 --lon -118.2491 --radius-km 1.5 --limit 10 --building-info
+   ```
+
+Optional, if a model server is running: the agent on the USC point with a plain-words request (see
+"Agent" above). If it is slow or down, the same table appears under a one-line banner; `--no-llm`
+skips the AI on purpose.
+
+Pre-demo check: `git status` clean, `.env` has the keys, and both runs above finish in about a second
+(cached; the "fetching" lines still print, which is normal) with "Vexcel calls this run: 0" on the
+second. Demo points are also listed in `TASKS.md`.
