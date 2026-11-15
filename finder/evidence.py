@@ -153,7 +153,7 @@ def _rot(q):
                      [2 * (x * z - y * w), 2 * (y * z + x * w), 1 - 2 * (x * x + y * y)]])
 
 
-def render_view(faces, rotation, yaw_deg, fov=FOV, size=480):
+def render_view(faces, rotation, yaw_deg, fov=FOV, size=800):
     """Perspective view looking along model-frame yaw (degrees from +x, counter-clockwise), level."""
     f = np.tan(np.radians(fov) / 2)
     j, i = np.meshgrid(np.linspace(-f, f, size), np.linspace(f, -f, size))
