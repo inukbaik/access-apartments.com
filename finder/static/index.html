@@ -7,9 +7,9 @@
 <meta name="description" content="Find a home a wheelchair user can get around in: every listing measured from its own 3D scan.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Vollkorn:wght@600&family=Hanken+Grotesk:wght@400;500;600&family=Newsreader:opsz,wght@6..72,400&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <style>
-/* Hallmark · shape: app screen · genre: editorial · theme: Garden (by request: warmer than Ink)
+/* Hallmark · shape: app screen · genre: editorial · theme: Garden, type set in Outfit (by request: the Apartments.com typeface, a CoStar brand)
  * nav: top bar with the search as one sentence · signature: the floor plan drawn from the scan, every doorway gap labelled with its width · states: idle, loading, empty, error, full
  * axes: light/roman-serif/chromatic-green · posture: committed · contrast: pass · v2.0.0 */
 /* Hallmark · pre-emit critique: P4 H4 E4 S4 R4 V4 · weakest: R, the listing rows are dense; figures take lining tabular numerals so they scan as a table */
@@ -20,7 +20,10 @@ html { font-size: 112.5%; }  /* 18px base: the page is read at arm's length in a
 :root {
   --plan-wall: var(--color-ink);
   --col-detail: 32rem;
-  --door-narrow: oklch(92% 0.04 60);  /* clay tint, opaque so the label covers the wall */
+  --font-display: "Outfit", ui-sans-serif, system-ui, sans-serif; --font-body: var(--font-display); --font-outlier: var(--font-display);
+  --tracking-display: -0.02em;
+  --color-out: oklch(56% 0.19 27);  /* a doorway out of spec: the photo dot and its plan label */
+  --list-h: min(34rem, 62vh);
   --scrim: color-mix(in oklab, var(--color-ink) 70%, transparent);
   --scrim-deep: color-mix(in oklab, var(--color-ink) 90%, transparent);
   --on-ink-line: color-mix(in oklab, var(--color-paper) 40%, transparent);
@@ -77,7 +80,12 @@ body { background: var(--color-paper); color: var(--color-ink-2); font-family: v
 .list-head { display: flex; justify-content: space-between; align-items: baseline; gap: var(--space-md); margin-bottom: var(--space-xs); flex-wrap: wrap; }
 .count { font-family: var(--font-display); font-weight: 600; color: var(--color-accent); font-size: var(--text-2xl); font-variant-numeric: lining-nums; }
 .notes { background: var(--tint-moss); border-radius: var(--radius-card); padding: var(--space-sm) var(--space-md); margin: 0 0 var(--space-md); color: var(--color-ink); max-width: none; }
-.table { width: 100%; border-collapse: collapse; border-top: var(--rule-hair) solid var(--color-rule-2); }
+.tablebox { max-height: var(--list-h); overflow-y: auto; border-top: var(--rule-hair) solid var(--color-rule-2); border-bottom: var(--rule-hair) solid var(--color-rule-2); overscroll-behavior: contain; }
+.tablebox:focus-visible { outline: 2px solid var(--color-focus); outline-offset: 2px; }
+.table { width: 100%; border-collapse: separate; border-spacing: 0; }
+.table thead th { position: sticky; top: 0; z-index: var(--z-raised); background: var(--color-paper); box-shadow: inset 0 -1px 0 var(--color-rule-2); }
+.table tbody tr:last-child td { border-bottom: 0; }
+.scroll-hint { font-size: var(--text-sm); color: var(--color-muted); margin-top: var(--space-2xs); }
 .table th { text-align: left; font-weight: 500; font-size: var(--text-sm); color: var(--color-muted); padding: var(--space-xs); border-bottom: var(--rule-hair) solid var(--color-rule); }
 .table td { padding: var(--space-sm) var(--space-xs); border-bottom: var(--rule-hair) solid var(--color-rule); vertical-align: middle; }
 .table tbody tr { cursor: pointer; transition: background-color var(--dur-short) var(--ease-out); }
@@ -113,9 +121,9 @@ body { background: var(--color-paper); color: var(--color-ink-2); font-family: v
 .plan svg { width: 100%; height: auto; display: block; }
 .plan .wall { stroke: var(--plan-wall); stroke-linecap: square; fill: none; }
 .plan .gap { stroke: var(--color-paper-2); stroke-linecap: butt; }
-.plan .lbl rect { fill: var(--door-narrow); stroke: var(--color-rule-2); }
+.plan .lbl rect { fill: var(--color-out); stroke: none; }
 .plan .lbl.in rect { fill: var(--color-accent); stroke: none; }
-.plan .lbl text { font-family: var(--font-body); font-weight: 600; fill: var(--color-ink); text-anchor: middle; dominant-baseline: central; font-variant-numeric: lining-nums; }
+.plan .lbl text { font-family: var(--font-body); font-weight: 600; fill: var(--color-accent-ink); text-anchor: middle; dominant-baseline: central; font-variant-numeric: lining-nums; }
 .plan .lbl.in text { fill: var(--color-accent-ink); }
 .plan a { cursor: pointer; }
 .plan a:focus-visible rect { stroke: var(--color-focus); stroke-width: 0.06; }
@@ -123,7 +131,7 @@ body { background: var(--color-paper); color: var(--color-ink-2); font-family: v
 .key { display: flex; gap: var(--space-md); flex-wrap: wrap; margin-top: var(--space-xs); font-size: var(--text-sm); color: var(--color-muted); }
 .key span::before { content: ""; display: inline-block; width: 0.8em; height: 0.8em; border-radius: 50%; margin-right: var(--space-2xs); vertical-align: -0.05em; }
 .key .k-in::before { background: var(--color-accent); }
-.key .k-out::before { background: var(--door-narrow); box-shadow: inset 0 0 0 1px var(--color-rule-2); }
+.key .k-out::before { background: var(--color-out); }
 .quote { margin: 0 0 var(--space-xs); }
 .quote q { color: var(--color-ink); font-family: var(--font-outlier); }
 .loading-line { color: var(--color-muted); font-size: var(--text-sm); padding: var(--space-md) 0; }
@@ -134,6 +142,9 @@ body { background: var(--color-paper); color: var(--color-ink-2); font-family: v
 .car-open img { width: 100%; aspect-ratio: 4 / 3; object-fit: cover; display: block; filter: contrast(1.06) saturate(0.94); }
 .car-open:hover .car-zoom { background: var(--color-ink); }
 .car-open:focus-visible { outline: 2px solid var(--color-focus); outline-offset: 2px; }
+.door-dot { position: absolute; left: 50%; top: 50%; width: 1.1rem; height: 1.1rem; margin: -0.55rem 0 0 -0.55rem; border-radius: 50%; background: var(--color-out); box-shadow: 0 0 0 3px var(--color-accent-ink), 0 0 0 7px color-mix(in oklab, var(--color-out) 35%, transparent); pointer-events: none; z-index: 2; }
+.pic { position: relative; width: fit-content; max-width: 100%; margin: 0 auto; }
+.lb .door-dot { width: 1.4rem; height: 1.4rem; margin: -0.7rem 0 0 -0.7rem; }
 .car-zoom { position: absolute; right: var(--space-xs); bottom: var(--space-xs); background: var(--scrim); color: var(--color-paper); font-size: var(--text-xs); padding: var(--space-2xs) var(--space-xs); border-radius: var(--radius-pill); }
 .car-bar { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: var(--space-sm); align-items: center; margin-top: var(--space-xs); }
 .car-cap { font-family: var(--font-outlier); color: var(--color-ink-2); text-align: center; }
@@ -292,19 +303,19 @@ function renderList(t) {
   $("summary").innerHTML = `<span class="count">${n}</span> of ${rows.length} fit every measured check`;
   $("notes").innerHTML = t.notes && !t.notes_withheld ? `<p class="notes">${esc(t.notes)}</p>` : "";
   if (!rows.length) { $("list").innerHTML = `<p class="empty">No scanned homes in this area. Try a wider radius.</p>`; return; }
-  $("list").innerHTML = `<table class="table"><thead><tr><th class="c-thumb"><span class="visually-hidden">Photo</span></th><th>Home</th>
+  $("list").innerHTML = `<div class="tablebox" tabindex="0" role="region" aria-label="Homes found"><table class="table"><thead><tr><th class="c-thumb"><span class="visually-hidden">Photo</span></th><th>Home</th>
     <th class="c-hall">Hallway</th><th>Doorway</th><th class="c-turn">Turning</th><th>Verdict</th></tr></thead><tbody>
     ${rows.map((b, i) => `<tr tabindex="0" data-i="${i}" aria-selected="false">
       <td class="c-thumb"><img class="thumb" loading="lazy" alt="" src="/api/thumb/${esc(b.recommended_unit || b.sid)}" onerror="this.style.visibility='hidden'"></td>
       <td><span class="name">${esc(b.name)}</span><span class="addr">${esc(where(b) || `${b.dist_km.toFixed(1)} km away`)}</span>${listingSays(b)}</td>
       <td class="c-hall">${cell(byName(b, "hallway"))}</td><td>${cell(byName(b, "door"))}</td><td class="c-turn">${cell(byName(b, "turning"))}</td>
       <td>${b.error ? `<span class="tag tag--out">Not loaded</span>` : b.passes ? `<span class="tag tag--in">Fits</span>` : `<span class="tag tag--out">Doesn't fit</span>`}</td></tr>`).join("")}
-    </tbody></table>`;
+    </tbody></table></div>${rows.length > 5 ? `<p class="scroll-hint">${rows.length} homes. Scroll the list to see them all.</p>` : ""}`;
 }
 
 function skeleton() {
-  $("list").innerHTML = `<table class="table skel" aria-hidden="true"><tbody>${Array.from({ length: 6 }, () =>
-    `<tr><td class="c-thumb"><div class="tall"></div></td><td><div style="width:60%"></div></td><td class="c-hall"><div></div></td><td><div></div></td><td class="c-turn"><div></div></td><td><div style="width:3rem"></div></td></tr>`).join("")}</tbody></table>`;
+  $("list").innerHTML = `<div class="tablebox"><table class="table skel" aria-hidden="true"><tbody>${Array.from({ length: 6 }, () =>
+    `<tr><td class="c-thumb"><div class="tall"></div></td><td><div style="width:60%"></div></td><td class="c-hall"><div></div></td><td><div></div></td><td class="c-turn"><div></div></td><td><div style="width:3rem"></div></td></tr>`).join("")}</tbody></table></div>`;
 }
 
 /* ---------- the detail: floor plan drawn from the scan ---------- */
@@ -331,6 +342,7 @@ function planSvg(floor, doors) {
 async function showDetail(i) {
   const b = rows[i];
   document.querySelectorAll(".table tbody tr").forEach((r) => r.setAttribute("aria-selected", r.dataset.i == i ? "true" : "false"));
+  document.querySelector(`.table tbody tr[data-i="${i}"]`)?.scrollIntoView({ block: "nearest" });
   const sid = b.recommended_unit || b.sid;
   const facts = b.checks.map((c) => {
     const v = c.reason === "measured" ? `${Math.round(c.value)} in` : c.reason === "no data" ? "no data" : "unreliable";
@@ -353,11 +365,11 @@ async function showDetail(i) {
     if (!r.ok) throw new Error(ev.error);
     shots = ev.doors.filter((d) => d.photo); cur = 0; shotSid = sid;
     $("plan").innerHTML = (ev.floors || []).map((f) => `${ev.floors.length > 1 ? `<p class="floor-name">${esc(f.label)}</p>` : ""}<figure class="plan">${planSvg(f, ev.doors)}</figure>`).join("")
-      + `<p class="key"><span class="k-in">Fits a wheelchair (32 in or more)</span><span class="k-out">Too narrow</span></p>`
+      + `<p class="key"><span class="k-in">Fits a wheelchair (32 in or more)</span><span class="k-out">Too narrow (red dot on its photo)</span></p>`
       + `<p class="muted">Each gap in a wall is a doorway, labelled with its width in inches.${shots.length ? " Click a label to see that doorway." : ""}</p>`
       + (shots.length ? `<h3 id="photos">The doorways that don't fit</h3>
         <figure class="car">
-          <button class="car-open" id="car-open" aria-label="Enlarge photo"><img id="car-img" alt="" src="/evidence/${sid}/${shots[0].photo}"><span class="car-zoom">Click to enlarge</span></button>
+          <button class="car-open" id="car-open" aria-label="Enlarge photo"><img id="car-img" alt="" src="/evidence/${sid}/${shots[0].photo}"><span class="door-dot" aria-hidden="true"></span><span class="car-zoom">Click to enlarge</span></button>
           <div class="car-bar">
             <button class="arrow" data-step="-1" aria-label="Previous doorway">${CHEV(-1)}</button>
             <figcaption class="car-cap" id="car-cap"></figcaption>
@@ -374,14 +386,14 @@ async function showDetail(i) {
 
 /* ---------- doorway photos: carousel and enlarged view ---------- */
 function caption(d, j) {
-  return `${Math.round(d.width_in)} in wide <small>Doorway ${j + 1} of ${shots.length} · seen from ${d.photo_from.distance_m} m away</small>`;
+  return `${Math.round(d.width_in)} in wide, at the red dot <small>Doorway ${j + 1} of ${shots.length} · seen from ${d.photo_from.distance_m} m away</small>`;
 }
 function showShot(j) {
   if (!shots.length) return;
   cur = Math.max(0, Math.min(shots.length - 1, j));
   const d = shots[cur], src = `/evidence/${shotSid}/${d.photo}`, alt = `Doorway ${Math.round(d.width_in)} inches wide`;
   if ($("car-img")) { $("car-img").src = src; $("car-img").alt = alt; $("car-cap").innerHTML = caption(d, cur); }
-  $("lb-pic").innerHTML = `<img src="${src}" alt="${esc(alt)}">`; $("lb-cap").innerHTML = caption(d, cur);
+  $("lb-pic").innerHTML = `<div class="pic"><img src="${src}" alt="${esc(alt)}"><span class="door-dot" aria-hidden="true"></span></div>`; $("lb-cap").innerHTML = caption(d, cur);
   document.querySelectorAll("[data-step]").forEach((b) => { b.disabled = cur + +b.dataset.step < 0 || cur + +b.dataset.step >= shots.length; });
   document.querySelectorAll("#dots button").forEach((b, k) => b.setAttribute("aria-current", k === cur ? "true" : "false"));
   shots.forEach((s, k) => { if (Math.abs(k - cur) === 1) new Image().src = `/evidence/${shotSid}/${s.photo}`; });  // preload neighbours
