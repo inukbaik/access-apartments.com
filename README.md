@@ -1,6 +1,6 @@
 # Accessible Spaces (HackPrinceton Fall 2026)
 
-Find a place you can actually live in, then get around the building when you arrive.
+Find a place you can actually live in: every listing screened for wheelchair access from its own 3D scan.
 
 Listings almost never say whether a wheelchair fits. Accessible Spaces screens real Houston and
 Los Angeles listings using CoStar's data. It measures hallway widths, door widths and bathroom
@@ -72,13 +72,16 @@ the atrium matched well.
 
 ## Findings from the data
 
-In a survey of 800 listings across LA and Houston:
+In a survey of 800 random home listings across LA and Houston (`.venv/bin/python -m finder.survey`, seed 0):
 
-- **Doors are the bottleneck.** Only 4% of listings measure ≥ 32 in on every mapped doorway.
-  (Surveyed before closet and pantry doorways were excluded, so this is a lower bound.)
-- **Only 7 listings pass all three checks.**
-- Door openings are sparse in the scans, and many rooms are unlabelled. This is why missing data
-  must fail rather than pass.
+- **12 of 800 (1.5%) pass all three checks.**
+- **Doors are the bottleneck.** Where the scan has doorway widths (412 listings), only 65 (16%)
+  measure ≥ 32 in on every counted doorway. Hallways pass in 182 of 229 measured, bathroom turning
+  space in 251 of 389.
+- **Most scans have a gap.** 590 of 800 (74%) lack the data for at least one check: no room labelled
+  hallway (71%), no bathroom size (51%) or no mapped doorway (47%). This is why missing data must
+  fail rather than pass. Of the 206 listings with all three measured, 12 pass.
+- Leaving out closet and pantry doorways changes little: door passes go from 59 to 65.
 
 ## Quick start
 

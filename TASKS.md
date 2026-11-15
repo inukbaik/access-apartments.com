@@ -53,9 +53,9 @@ in listing text, information unavailable; stories cross-checked with Vexcel roof
 **Demo, web page:** `.venv/bin/python -m finder.web --warm --no-llm`, then http://localhost:8800
 (see `finder/README.md`, "Web page" and "Demo").
 
-**Findings so far** (800-listing survey, LA + Houston; run before the closet rule of step 6, so
-the door figure is a lower bound): doors are the bottleneck (only 4% of
-listings measure ≥ 32 in on every doorway); 7 listings pass all three checks.
+**Findings** (800 random home listings, LA + Houston, `finder.survey`, Sun Nov 15): 12 pass all
+three checks (1.5%). Doors are the bottleneck: 65 of the 412 listings with doorway widths pass
+(16%). 590 of 800 lack the data for at least one check. Details in README.md.
 
 **Open questions:** does CoStar allow sending sponsor data to cloud AI models (ask `/ask-costar`)?
 Any free LLM credits from sponsors?
