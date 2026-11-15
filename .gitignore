@@ -40,3 +40,6 @@ cache/
 mp_out/
 photos*/
 models_index.csv
+
+# Hallmark design skill state
+.hallmark/

@@ -2,7 +2,16 @@
 import csv
 import math
 import os
+import re
 import sys
+
+# Scans of shared amenities, not homes. The whole name must match.
+NOT_A_HOME = re.compile(
+    r"^(fitness( cent(er|re))?|gym|pool|spa|lobby|club ?(house|room|lounge)|business (cent(er|re)|lounge)|"
+    r"courtyard|(\w+ )?lounge|conference (room|cent(er|re))|leasing office|office|laundry( \w+)?|"
+    r"(game|rec|media|community|screening|spin|mail) ?room|rooftop( \w+)?|sky deck|entrance|"
+    r"(movie )?theat(er|re)|playground|elevator (lobby|hall)|library|(cyber )?caf[eé]|picnic area|"
+    r"barbecue|athletic club|warehouse|patio)$", re.I)
 
 
 def haversine_km(lat1, lon1, lat2, lon2):
@@ -29,7 +38,7 @@ def load_candidates(index_path, lat, lon, radius_km, limit):
             if rlat is None or rlon is None:
                 continue
             rooms = _float(row.get("room_count"))
-            if rooms == 0:
+            if rooms == 0 or NOT_A_HOME.match((row.get("name") or "").strip()):
                 continue
             dist = haversine_km(lat, lon, rlat, rlon)
             if dist > radius_km:

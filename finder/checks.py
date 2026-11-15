@@ -45,14 +45,31 @@ def check_hallway(rooms):
     return _result("hallway", "pass", "measured", low, HALL_MIN_IN, [i for i, _ in m], note)
 
 
-def check_door(floors):
+STORAGE_ROOMS = {"closet", "pantry"}  # rooms a wheelchair user reaches into, not through
+
+
+def storage_edges(rooms):
+    """Ids of the wall edges that border a room classified as a closet or pantry."""
+    return {e.get("id") for r in rooms or [] if _label(r) in STORAGE_ROOMS
+            for e in ((r.get("boundary") or {}).get("edges") or [])}
+
+
+def check_door(floors, rooms=None):
+    """Narrowest doorway. Doorways into a room the scan classifies as a closet or pantry are not
+    counted; a doorway into an unclassified room still counts (uncertainty means failure)."""
     note = "Doorways are sparsely mapped; width may include the frame."
-    m = []
+    skip = storage_edges(rooms)
+    m, skipped = [], 0
     for floor in floors or []:
         for edge in floor.get("edges") or []:
             for op in edge.get("openings") or []:
                 if op.get("type") == "doorway" and op.get("width"):
-                    m.append((edge.get("id"), op["width"] * M_TO_IN))
+                    if edge.get("id") in skip:
+                        skipped += 1
+                    else:
+                        m.append((edge.get("id"), op["width"] * M_TO_IN))
+    if skipped:
+        note += f" {skipped} closet or pantry doorway{'s' if skipped != 1 else ''} not counted."
     if not m:
         return _result("door", "fail", "no data", None, DOOR_MIN_IN, [], note)
     ok = [(i, w) for i, w in m if w >= DOOR_PLAUSIBLE_MIN_IN]
@@ -81,5 +98,5 @@ def check_turning(rooms):
 
 
 def run_checks(model):
-    return [check_hallway(model.get("rooms")), check_door(model.get("floors")),
+    return [check_hallway(model.get("rooms")), check_door(model.get("floors"), model.get("rooms")),
             check_turning(model.get("rooms"))]

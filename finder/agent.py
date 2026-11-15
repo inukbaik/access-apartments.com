@@ -161,7 +161,7 @@ def _argtext(args):
     return ", ".join(f"{k}={json.dumps(v)}" for k, v in args.items() if k != "notes")[:90]
 
 
-def run_agent(backend, request, ctx, max_steps=14, time_budget=120, call_timeout=45, log=print):
+def run_agent(backend, request, ctx, max_steps=16, time_budget=120, call_timeout=45, log=print):
     """Run the loop. Returns AgentResult (finished True/False; reason says why not). Whatever was
     searched before a failure stays in ctx, so the caller can still show the merged results."""
     res = AgentResult()
@@ -231,6 +231,9 @@ def run_agent(backend, request, ctx, max_steps=14, time_budget=120, call_timeout
                 log(f"[step {step}] {c['name']}({_argtext(args)}) -> repeated identical call")
                 return fallback("repeated identical tool call")
             seen.add(key)
+            if result is None and c["name"] == "finish" and isinstance(args, dict) and not isinstance(args.get("notes"), str):
+                n = args.get("notes")  # small models send a list of sentences, or nothing: accept both
+                args["notes"] = " ".join(map(str, n)) if isinstance(n, list) else "" if n is None else str(n)
             if result is None:
                 result = call_tool(ctx, c["name"], args)
             tool_s = time.monotonic() - t2
@@ -329,7 +332,22 @@ def print_extra(ex, keys, labels):
         print("No CoStar record:\n" + "\n".join(gaps))
 
 
-def answer(request, lat, lon, radius_km, limit, backend=None, refresh=False, max_steps=14, time_budget=120,
+def _ranked_json(ranked, keys, labels, ex, passes, required):
+    """The final table as data (for the web page): one entry per building, best first."""
+    out = []
+    for n, (r, key) in enumerate(zip(ranked, keys), 1):
+        c = r["candidate"]
+        u = recommended_unit(r, required) if not r.get("error") else None
+        out.append({"label": labels[n - 1] if labels else f"B{n}", "sid": c["sid"], "name": c["name"],
+                    "address": c.get("address"), "city": c.get("city"), "lat": c.get("lat"), "lon": c.get("lon"), "dist_km": c["dist_km"], "error": r.get("error"), "checks": r["checks"],
+                    "passes": bool(passes(r)), "recommended_unit": u["candidate"]["sid"] if u else None,
+                    "units": [{"sid": x["candidate"]["sid"], "name": x["candidate"]["name"], "checks": x["checks"],
+                               "error": x.get("error")} for x in r.get("units") or [r]],
+                    "extra": {need: ex.result(need, key) for need in ex.needs}})
+    return out
+
+
+def answer(request, lat, lon, radius_km, limit, backend=None, refresh=False, max_steps=16, time_budget=120,
            call_timeout=45, out_dir="out/finder", screen=None, log=print, text_index=None):
     """Run the agent (if backend) and print the final result. Never raises for LLM trouble;
     the table always comes from our own checks. Returns the AgentResult (or None with no backend)."""
@@ -411,7 +429,8 @@ def answer(request, lat, lon, radius_km, limit, backend=None, refresh=False, max
                                          for n, rs in ex.results.items()}},
              "searches": ctx.searches, "fetches": ctx.fetches, "inspected": ctx.inspected,
              "recommended": ctx.recommended, "notes": res.notes if res else "", "notes_withheld": withheld,
-             "elapsed_s": round(time.monotonic() - started, 2), "steps": res.steps if res else []}
+             "elapsed_s": round(time.monotonic() - started, 2), "steps": res.steps if res else [],
+             "ranked": _ranked_json(ranked, keys, labels, ex, passes if labels else passes_all, ctx.required)}
     with open(os.path.join(out_dir, "agent_trace.json"), "w") as f:
         json.dump(trace, f, indent=2)
     return res

@@ -39,6 +39,15 @@ assert r["status"] == "fail" and r["reason"] == "bad measurement" and r["value"]
 r = check_door(floor(0.7, 0.05))
 assert r["status"] == "fail" and r["reason"] == "measured" and r["value"] == 27.6 and r["evidence"] == ["e0"], r
 assert check_door(floor(0.9))["reason"] == "measured"
+# a doorway into a closet or pantry is not counted; one into an unclassified room still is
+closet = dict(room("c", "Closet", 1, 1), boundary={"edges": [{"id": "e1"}]})
+r = check_door(floor(0.9, 0.6), [closet])
+assert r["status"] == "pass" and r["value"] == 35.4 and "1 closet or pantry doorway not counted" in r["note"], r
+void = dict(room("v", "Void", 1, 1), boundary={"edges": [{"id": "e1"}]})
+r = check_door(floor(0.9, 0.7), [void, room("k", "Kitchen", 3, 3)])
+assert r["status"] == "fail" and r["value"] == 27.6, r
+r = check_door(floor(0.6), [dict(closet, boundary={"edges": [{"id": "e0"}]})])
+assert r["status"] == "fail" and r["reason"] == "no data", r
 
 # turning: 1.6 m = 63.0 in, 1.2 m = 47.2 in
 r = check_turning([room("a", "Bathroom", 1.2, 3), room("b", "Bathroom", 1.6, 2)])

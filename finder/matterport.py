@@ -11,7 +11,8 @@ CACHE_DIR = "cache/finder"
 QUERY = """query Screen($id: ID!) { model(id: $id) {
   id name
   rooms { id classifications { label confidence }
-          dimensions(units: metric) { areaFloor width depth height } }
+          dimensions(units: metric) { areaFloor width depth height }
+          boundary { edges { id } } }
   floors { id label edges { id type thickness openings { type label width height lowerElevation } } }
 } }"""
 
@@ -25,7 +26,10 @@ def fetch_model(sid, refresh=False):
     path = os.path.join(CACHE_DIR, f"{sid}.json")
     if not refresh and os.path.exists(path):
         with open(path) as f:
-            return json.load(f)
+            model = json.load(f)
+        rooms = model.get("rooms") or []
+        if not rooms or "boundary" in rooms[0]:  # older cache files have no room boundaries: fetch again
+            return model
     data, errors = graph(QUERY, {"id": sid})
     model = (data or {}).get("model")
     if errors or not model:

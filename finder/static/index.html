@@ -1,0 +1,483 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Accessible Spaces</title>
+<meta name="description" content="Find a home a wheelchair user can get around in: every listing measured from its own 3D scan.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+/* Hallmark · shape: app screen · genre: editorial · theme: Garden, type set in Outfit (by request: the Apartments.com typeface, a CoStar brand)
+ * nav: top bar with the search as one sentence · signature: the floor plan drawn from the scan, every doorway gap labelled with its width · states: idle, loading, empty, error, full
+ * axes: light/roman-serif/chromatic-green · posture: committed · contrast: pass · v2.0.0 */
+/* Hallmark · pre-emit critique: P4 H4 E4 S4 R4 V4 · weakest: R, the listing rows are dense; figures take lining tabular numerals so they scan as a table */
+@import url("./tokens.css");
+@import url("./base.css");
+
+html { font-size: 112.5%; }  /* 18px base: the page is read at arm's length in a demo */
+:root {
+  --plan-wall: var(--color-ink);
+  --col-detail: 32rem;
+  --font-display: "Outfit", ui-sans-serif, system-ui, sans-serif; --font-body: var(--font-display); --font-outlier: var(--font-display);
+  --tracking-display: -0.02em;
+  --color-out: oklch(56% 0.19 27);  /* a doorway out of spec: the photo dot and its plan label */
+  --list-h: min(34rem, 62vh);
+  --color-out-on-ink: oklch(80% 0.1 27);
+  --scrim: color-mix(in oklab, var(--color-ink) 70%, transparent);
+  --scrim-deep: color-mix(in oklab, var(--color-ink) 90%, transparent);
+  --on-ink-line: color-mix(in oklab, var(--color-paper) 40%, transparent);
+  --on-ink-wash: color-mix(in oklab, var(--color-paper) 12%, transparent);
+  --on-ink-faint: color-mix(in oklab, var(--color-paper) 25%, transparent);
+}
+
+body { background: var(--color-paper); color: var(--color-ink-2); font-family: var(--font-body); }
+.wrap { max-width: 86rem; margin: 0 auto; padding: 0 var(--space-lg); }
+
+/* Top bar: the green ink band with oat text */
+.bar { background: var(--color-ink); color: var(--color-paper); }
+.bar .wrap { display: flex; align-items: baseline; justify-content: space-between; gap: var(--space-md); padding-block: var(--space-md); flex-wrap: wrap; }
+.word { font-family: var(--font-display); font-weight: 600; letter-spacing: var(--tracking-display); color: var(--color-paper); font-size: var(--text-xl); margin: 0; }
+.bar p:not(.word) { margin: 0; color: var(--color-accent-2); font-size: var(--text-sm); }
+
+/* The search, as one sentence */
+.ask { padding-block: var(--space-xl) var(--space-lg); }
+.ask h1 { font-family: var(--font-display); font-weight: 600; letter-spacing: var(--tracking-display); color: var(--color-ink); font-size: var(--text-3xl); line-height: 1.04; margin: 0 0 var(--space-lg); max-width: 30ch; }
+.form { display: grid; grid-template-columns: minmax(0, 2.2fr) minmax(0, 1.4fr) minmax(0, 0.7fr) auto; gap: var(--space-sm); align-items: end; }
+.field label { display: block; font-size: var(--text-sm); font-weight: 500; color: var(--color-muted); margin-bottom: var(--space-2xs); }
+.field input, .field select { width: 100%; min-height: 2.75rem; font: inherit; color: var(--color-ink); background: var(--color-paper); border: var(--rule-hair) solid var(--color-muted); border-radius: var(--radius-card); padding: var(--space-xs) var(--space-sm); }
+.field input:hover, .field select:hover { border-color: var(--color-ink); }
+.field input:focus-visible, .field select:focus-visible { outline: 2px solid var(--color-focus); outline-offset: 1px; }
+.opts { display: flex; align-items: center; gap: var(--space-md); margin-top: var(--space-sm); font-size: var(--text-sm); color: var(--color-muted); flex-wrap: wrap; }
+.opts label { display: inline-flex; gap: var(--space-xs); align-items: center; cursor: pointer; color: var(--color-ink-2); }
+.opts input { accent-color: var(--color-accent); width: 1.1rem; height: 1.1rem; }
+.opts input:focus-visible { outline: 2px solid var(--color-focus); outline-offset: 2px; }
+.btn { min-height: 2.75rem; border: var(--rule-hair) solid var(--color-rule-2); border-radius: var(--radius-pill); padding: var(--space-xs) var(--space-lg); font: inherit; font-weight: 600; background: transparent; color: var(--color-ink); cursor: pointer; transition: background-color var(--dur-short) var(--ease-out), border-color var(--dur-short) var(--ease-out); }
+.btn:hover { border-color: var(--color-ink); }
+.btn:active { transform: translateY(1px); }
+.btn:focus-visible { outline: 2px solid var(--color-focus); outline-offset: 2px; }
+.btn:disabled, .btn--primary:disabled { background: var(--color-paper-3); border-color: var(--color-rule); color: var(--color-muted); cursor: progress; }
+.btn--primary { background: var(--color-accent); border-color: var(--color-accent); color: var(--color-accent-ink); }
+.btn--primary:hover { background: color-mix(in oklab, var(--color-accent) 85%, var(--color-ink)); border-color: transparent; }
+
+/* Layout */
+.work { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, var(--col-detail)); gap: var(--space-xl); padding-block: var(--space-md) var(--space-2xl); align-items: start; }
+@media (max-width: 68rem) { .work { grid-template-columns: minmax(0, 1fr); } .form { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); } }
+@media (max-width: 36rem) { .form { grid-template-columns: minmax(0, 1fr); } .wrap { padding: 0 var(--space-md); } }
+
+/* What it did */
+.log { margin: var(--space-xs) 0 var(--space-lg); padding: 0; list-style: none; }
+.log li { display: grid; grid-template-columns: 1.75rem minmax(0, 1fr); gap: var(--space-xs); padding: var(--space-2xs) 0; color: var(--color-muted); }
+.log li.now { color: var(--color-ink); font-weight: 500; }
+.log li.warn { color: var(--color-ink-2); }
+.log .n { font-weight: 600; color: var(--color-accent); font-variant-numeric: lining-nums tabular-nums; }
+.log-head { display: flex; justify-content: space-between; align-items: baseline; gap: var(--space-sm); }
+.log-head h2, .list-head h2, .detail h2, .detail h3 { font-family: var(--font-display); font-weight: 600; color: var(--color-ink); letter-spacing: var(--tracking-display); margin: 0; }
+.log-head h2, .list-head h2 { font-size: var(--text-xl); }
+.muted { color: var(--color-muted); font-size: var(--text-sm); }
+
+/* Result list */
+.list-head { display: flex; justify-content: space-between; align-items: baseline; gap: var(--space-md); margin-bottom: var(--space-xs); flex-wrap: wrap; }
+.count { font-family: var(--font-display); font-weight: 600; color: var(--color-accent); font-size: var(--text-2xl); font-variant-numeric: lining-nums; }
+.notes { background: var(--tint-moss); border-radius: var(--radius-card); padding: var(--space-sm) var(--space-md); margin: 0 0 var(--space-md); color: var(--color-ink); max-width: none; }
+.tablebox { max-height: var(--list-h); overflow-y: auto; border-top: var(--rule-hair) solid var(--color-rule-2); border-bottom: var(--rule-hair) solid var(--color-rule-2); overscroll-behavior: contain; }
+.tablebox:focus-visible { outline: 2px solid var(--color-focus); outline-offset: 2px; }
+.table { width: 100%; border-collapse: separate; border-spacing: 0; }
+.table thead th { position: sticky; top: 0; z-index: var(--z-raised); background: var(--color-paper); box-shadow: inset 0 -1px 0 var(--color-rule-2); }
+.table tbody tr:last-child td { border-bottom: 0; }
+.scroll-hint { font-size: var(--text-sm); color: var(--color-muted); margin-top: var(--space-2xs); }
+.table th { text-align: left; font-weight: 500; font-size: var(--text-sm); color: var(--color-muted); padding: var(--space-xs); border-bottom: var(--rule-hair) solid var(--color-rule); }
+.table td { padding: var(--space-sm) var(--space-xs); border-bottom: var(--rule-hair) solid var(--color-rule); vertical-align: middle; }
+.table tbody tr { cursor: pointer; transition: background-color var(--dur-short) var(--ease-out); }
+.table tbody tr:hover { background: var(--color-paper-2); }
+.table tbody tr[aria-selected="true"] { background: var(--color-paper-2); box-shadow: inset 4px 0 0 var(--color-accent); }
+.table tbody tr:focus-visible { outline: 2px solid var(--color-focus); outline-offset: -2px; }
+.thumb { width: 5.5rem; height: 4rem; object-fit: cover; border-radius: var(--radius-card); outline: var(--rule-hair) solid var(--color-rule); outline-offset: -1px; background: var(--color-paper-3); display: block; filter: contrast(1.06) saturate(0.94); }
+.name { color: var(--color-ink); font-weight: 600; display: block; }
+.addr { color: var(--color-muted); font-size: var(--text-sm); }
+.fig { font-size: var(--text-md); font-weight: 500; color: var(--color-ink); white-space: nowrap; font-variant-numeric: lining-nums tabular-nums; }
+.fig.miss { display: inline-block; padding: 0 var(--space-xs); border-radius: var(--radius-pill); background: var(--tint-clay); }
+.fig.none { color: var(--color-muted); font-weight: 400; font-size: var(--text-sm); }
+.tag { display: inline-flex; padding: var(--space-2xs) var(--space-sm); border-radius: var(--radius-pill); font-size: var(--text-sm); font-weight: 600; white-space: nowrap; }
+.tag--in { background: var(--color-accent); color: var(--color-accent-ink); }
+.tag--out { box-shadow: inset 0 0 0 var(--rule-hair) var(--color-rule-2); color: var(--color-muted); }
+.said { font-size: var(--text-sm); color: var(--color-accent); display: block; margin-top: var(--space-2xs); }
+@media (max-width: 48rem) { .table .c-thumb, .table .c-hall, .table .c-turn { display: none; } }
+
+/* Skeleton and empty states */
+.skel td div { height: 0.9rem; border-radius: 4px; background: var(--color-paper-3); }
+.skel td .tall { height: 4rem; width: 5.5rem; border-radius: var(--radius-card); }
+.empty { border-top: var(--rule-hair) solid var(--color-rule-2); padding: var(--space-xl) 0; color: var(--color-muted); max-width: 40ch; }
+.error { border-top: var(--rule-hair) solid var(--color-rule-2); padding: var(--space-md) 0; color: var(--color-ink); }
+
+/* Detail: the signature */
+.detail { position: sticky; top: var(--space-md); max-height: calc(100vh - 2 * var(--space-md)); overflow-y: auto; overscroll-behavior: contain; border-top: var(--rule-hair) solid var(--color-rule-2); padding: var(--space-sm) var(--space-xs) var(--space-md) 0; scrollbar-gutter: stable; }
+@media (max-width: 68rem) { .detail { position: static; max-height: none; overflow: visible; } }
+.detail h2 { font-size: var(--text-2xl); line-height: 1.04; }
+.detail h3 { font-size: var(--text-lg); margin: var(--space-lg) 0 var(--space-xs); }
+.facts { margin: var(--space-md) 0 0; padding: 0; list-style: none; border-top: var(--rule-hair) solid var(--color-rule); }
+.facts li { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: var(--space-sm); padding: var(--space-xs) 0; border-bottom: var(--rule-hair) solid var(--color-rule); }
+.facts .why { grid-column: 1 / -1; color: var(--color-muted); font-size: var(--text-sm); margin-top: calc(-1 * var(--space-2xs)); }
+.plan { margin: 0; background: var(--color-paper-2); border-radius: var(--radius-card); padding: var(--space-sm); }
+.plan svg { width: 100%; height: auto; display: block; }
+.plan .wall { stroke: var(--plan-wall); stroke-linecap: square; fill: none; }
+.plan .gap { stroke: var(--color-paper-2); stroke-linecap: butt; }
+.plan .lbl rect { fill: var(--color-out); stroke: none; }
+.plan .lbl.in rect { fill: var(--color-accent); stroke: none; }
+.plan .lbl text { font-family: var(--font-body); font-weight: 600; fill: var(--color-accent-ink); text-anchor: middle; dominant-baseline: central; font-variant-numeric: lining-nums; }
+.plan .lbl.in text { fill: var(--color-accent-ink); }
+.plan .lbl.st rect { fill: var(--color-muted); }
+.plan a { cursor: pointer; }
+.plan a:focus-visible rect { stroke: var(--color-focus); stroke-width: 0.06; }
+.floors { display: flex; gap: var(--space-2xs); margin-bottom: var(--space-xs); flex-wrap: wrap; }
+.floors button { min-height: 2.25rem; padding: 0 var(--space-md); border-radius: var(--radius-pill); border: var(--rule-hair) solid var(--color-rule-2); background: transparent; color: var(--color-ink-2); font: inherit; font-size: var(--text-sm); font-weight: 500; cursor: pointer; }
+.floors button:hover { border-color: var(--color-ink); }
+.floors button[aria-selected="true"] { background: var(--color-ink); border-color: var(--color-ink); color: var(--color-paper); }
+.floors .n-out { color: var(--color-out); font-weight: 600; margin-left: var(--space-2xs); }
+.floors button[aria-selected="true"] .n-out { color: var(--color-out-on-ink); }
+.plan .lbl.on rect { stroke: var(--color-ink); stroke-width: var(--on-w); }
+.door-dot.fits { background: var(--color-accent); box-shadow: 0 0 0 3px var(--color-accent-ink), 0 0 0 7px color-mix(in oklab, var(--color-accent) 35%, transparent); }
+.key { display: flex; gap: var(--space-md); flex-wrap: wrap; margin-top: var(--space-xs); font-size: var(--text-sm); color: var(--color-muted); }
+.key span::before { content: ""; display: inline-block; width: 0.8em; height: 0.8em; border-radius: 50%; margin-right: var(--space-2xs); vertical-align: -0.05em; }
+.key .k-in::before { background: var(--color-accent); }
+.key .k-out::before { background: var(--color-out); }
+.key .k-st::before { background: var(--color-muted); }
+.door-dot.skip { background: var(--color-muted); box-shadow: 0 0 0 3px var(--color-accent-ink); }
+.scan-link { color: var(--color-accent); font-weight: 500; font-size: var(--text-sm); margin-left: var(--space-sm); }
+.scan-link:focus-visible { outline: 2px solid var(--color-focus); outline-offset: 2px; }
+.quote { margin: 0 0 var(--space-xs); }
+.quote q { color: var(--color-ink); font-family: var(--font-outlier); }
+.loading-line { color: var(--color-muted); font-size: var(--text-sm); padding: var(--space-md) 0; }
+
+/* Doorway photos: one at a time, arrows to step, click to enlarge */
+.car { margin: 0; }
+.car-open { display: block; width: 100%; padding: 0; border: 0; background: var(--color-paper-3); border-radius: var(--radius-card); overflow: hidden; cursor: zoom-in; position: relative; }
+.car-open img { width: 100%; aspect-ratio: 5 / 3; object-fit: cover; display: block; filter: contrast(1.06) saturate(0.94); }
+.car-open:hover .car-zoom { background: var(--color-ink); }
+.car-open:focus-visible { outline: 2px solid var(--color-focus); outline-offset: 2px; }
+.door-dot { position: absolute; left: 50%; top: 50%; width: 1.1rem; height: 1.1rem; margin: -0.55rem 0 0 -0.55rem; border-radius: 50%; background: var(--color-out); box-shadow: 0 0 0 3px var(--color-accent-ink), 0 0 0 7px color-mix(in oklab, var(--color-out) 35%, transparent); pointer-events: none; z-index: 2; }
+.pic { position: relative; width: fit-content; max-width: 100%; margin: 0 auto; }
+.lb .door-dot { width: 1.4rem; height: 1.4rem; margin: -0.7rem 0 0 -0.7rem; }
+.car-zoom { position: absolute; right: var(--space-xs); bottom: var(--space-xs); background: var(--scrim); color: var(--color-paper); font-size: var(--text-xs); padding: var(--space-2xs) var(--space-xs); border-radius: var(--radius-pill); }
+.car-bar { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: var(--space-sm); align-items: center; margin-top: var(--space-xs); }
+.car-cap { font-family: var(--font-outlier); color: var(--color-ink-2); text-align: center; }
+.car-cap small { display: block; font-family: var(--font-body); color: var(--color-muted); font-size: var(--text-sm); }
+.arrow { width: 2.75rem; height: 2.75rem; display: grid; place-items: center; border-radius: 50%; border: var(--rule-hair) solid var(--color-rule-2); background: var(--color-paper); color: var(--color-ink); cursor: pointer; transition: background-color var(--dur-short) var(--ease-out), border-color var(--dur-short) var(--ease-out); }
+.arrow:hover:not(:disabled) { border-color: var(--color-ink); background: var(--color-paper-2); }
+.arrow:disabled { background: var(--color-paper-2); color: var(--color-muted); border-color: var(--color-rule); cursor: default; }
+.arrow svg { width: 1.1rem; height: 1.1rem; }
+.dots { display: flex; justify-content: center; gap: var(--space-2xs); margin-top: var(--space-xs); }
+.dots button { width: 0.6rem; height: 0.6rem; padding: 0; border-radius: 50%; border: 0; background: var(--color-rule); cursor: pointer; }
+.dots button[aria-current="true"] { background: var(--color-ink); }
+
+/* Enlarged photo */
+.lb { border: 0; padding: 0; background: transparent; max-width: min(92vw, 70rem); width: 100%; color: var(--color-paper); }
+.lb::backdrop { background: var(--scrim-deep); }
+.lb img { width: auto; max-width: 100%; max-height: 78vh; margin: 0 auto; border-radius: var(--radius-card); display: block; }
+.lb .car-bar { margin-top: var(--space-sm); }
+.lb .car-cap { color: var(--color-paper); font-size: var(--text-lg); }
+.lb .car-cap small { color: var(--color-accent-2); }
+.lb .arrow { background: transparent; color: var(--color-paper); border-color: var(--on-ink-line); }
+.lb .arrow:hover:not(:disabled) { background: var(--on-ink-wash); border-color: var(--color-paper); }
+.lb .arrow:disabled { color: var(--on-ink-faint); border-color: var(--on-ink-wash); background: transparent; }
+.lb-close { position: absolute; top: var(--space-xs); right: var(--space-xs); }
+
+@media (prefers-reduced-motion: reduce) { *, *::before, *::after { transition-duration: 0.01ms !important; } }
+</style>
+</head>
+<body>
+<header class="bar">
+  <div class="wrap">
+    <p class="word">Accessible Spaces</p>
+    <p>Every home measured from its own 3D scan</p>
+  </div>
+</header>
+
+<section class="ask wrap" aria-labelledby="ask-h">
+  <h1 id="ask-h">Find a home you can get around in.</h1>
+  <form id="form" class="form">
+    <div class="field"><label for="request">What you need</label>
+      <input id="request" value="I use a power wheelchair. I need a wheelchair accessible home with step-free entry."></div>
+    <div class="field"><label for="area">Near</label><select id="area"></select></div>
+    <div class="field"><label for="radius">Within</label>
+      <select id="radius"><option value="1">1 km</option><option value="1.5" selected>1.5 km</option><option value="3">3 km</option><option value="5">5 km</option></select></div>
+    <button class="btn btn--primary" id="go" type="submit">Find homes</button>
+  </form>
+  <div class="opts">
+    <label><input type="checkbox" id="llm"> Let the AI agent plan the search</label>
+    <span>Doorways 32 in, hallways 36 in, a 60 in turning circle in a bathroom. Anything the scan can’t measure counts as a fail.</span>
+  </div>
+</section>
+
+<main class="work wrap">
+  <section aria-labelledby="list-h">
+    <div id="logbox" hidden>
+      <div class="log-head"><h2>What it did</h2><span class="muted" id="elapsed"></span></div>
+      <ol class="log" id="log" aria-live="polite"></ol>
+    </div>
+    <div class="list-head"><h2 id="list-h">Homes</h2><span id="summary" class="muted"></span></div>
+    <div id="notes"></div>
+    <div id="list"><p class="empty">Pick an area and press Find homes. Each home is measured from its scan in a few seconds.</p></div>
+  </section>
+  <aside class="detail" id="detail" aria-live="polite">
+    <p class="muted">Choose a home to see its floor plan, with every doorway measured.</p>
+  </aside>
+</main>
+
+<dialog class="lb" id="lb" aria-label="Doorway photo">
+  <div id="lb-pic"></div>
+  <button class="arrow lb-close" id="lb-close" aria-label="Close"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 3l10 10M13 3L3 13"/></svg></button>
+  <div class="car-bar">
+    <button class="arrow" data-step="-1" aria-label="Previous doorway"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M10 3L5 8l5 5"/></svg></button>
+    <p class="car-cap" id="lb-cap"></p>
+    <button class="arrow" data-step="1" aria-label="Next doorway"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M6 3l5 5-5 5"/></svg></button>
+  </div>
+</dialog>
+
+<script>
+const $ = (id) => document.getElementById(id);
+const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const RANK = { fail: 0, "bad measurement": 0, pass: 1, storage: 2 };  // doorway photos: out of spec first, closets last
+const NAMES = { hallway: "Hallway", door: "Narrowest doorway", turning: "Bathroom turning space" };
+let presets = [], rows = [];
+let shots = [], cur = 0, shotSid = "";  // the doorway photos of the open home
+const CHEV = (d) => `<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8"><path d="${d < 0 ? "M10 3L5 8l5 5" : "M6 3l5 5-5 5"}"/></svg>`;
+
+async function init() {
+  const cfg = await (await fetch("/api/config")).json();
+  presets = cfg.presets;
+  $("area").innerHTML = presets.map((p, i) => `<option value="${i}">${esc(p.name)}</option>`).join("");
+  $("llm").checked = cfg.llm_default;
+  const q = new URLSearchParams(location.search);  // a search lives in the URL: ?area=3&radius=1.5&agent=0&need=...
+  if (q.has("area")) $("area").value = q.get("area");
+  if (q.has("radius")) $("radius").value = q.get("radius");
+  if (q.has("need")) $("request").value = q.get("need");
+  if (q.has("agent")) $("llm").checked = q.get("agent") === "1";
+  if (q.has("area")) $("form").requestSubmit();
+}
+
+/* ---------- the agent's steps, in plain words ---------- */
+function plain(line) {
+  let m;
+  if ((m = line.match(/^\[step \d+\] (\w+)\((.*)\) -> (.*?)(\s+\(llm.*)?$/))) {
+    const [, tool, args, out] = m;
+    if (tool === "set_requirements") return "Worked out what to measure: hallways, doorways and bathroom turning space.";
+    if (tool === "set_extra_needs") return `Noted what the scan can't measure (${esc(out.replace(/^extra needs: /, ""))}). It will look for those in the listing text.`;
+    if (tool === "search_area") {
+      const r = args.match(/radius_km=([\d.]+)/), b = out.match(/(\d+) buildings/);
+      return `Measured ${b ? b[1] : "the"} buildings within ${r ? r[1] : "the chosen"} km from their scans.`;
+    }
+    if (tool === "inspect_building") return `Checked the other units of ${esc(out.split(":")[0])} for a missing measurement.`;
+    if (tool === "search_listing_text") {
+      const need = (args.match(/need="([^"]+)"/) || [])[1] || "a feature";
+      const f = out.match(/(\d+) of (\d+) listing says/);
+      if (/STOPPED|ERROR/.test(out)) return { warn: true, text: `Skipped a repeat search for ${esc(need)}.` };
+      return f ? `Read the listing text for “${esc(need)}”: ${f[1]} of ${f[2]} homes mention it.` : `Read the listing text for “${esc(need)}”.`;
+    }
+    if (tool === "finish") return "Picked the homes worth a visit.";
+    return null;
+  }
+  if ((m = line.match(/^(\d+) candidates within ([\d.]+) km/))) return `Found ${m[1]} scanned homes within ${m[2]} km.`;
+  if ((m = line.match(/agent stopped: (.*)/))) return { warn: true, text: `The AI agent stopped (${esc(m[1])}). These are the measured results.` };
+  if (/extra-needs text search failed/.test(line)) return { warn: true, text: "Couldn't read the listing text, so those needs are unknown." };
+  return null;
+}
+
+function renderLog(log, done) {
+  const items = log.map(plain).filter(Boolean);
+  $("logbox").hidden = !items.length && done;
+  $("log").innerHTML = items.map((it, i) => {
+    const t = typeof it === "string" ? { text: it } : it;
+    const cls = t.warn ? "warn" : (!done && i === items.length - 1 ? "now" : "");
+    return `<li class="${cls}"><span class="n">${i + 1}</span><span>${t.text}</span></li>`;
+  }).join("") || `<li class="now"><span class="n">1</span><span>Starting&hellip;</span></li>`;
+}
+
+/* ---------- the list ---------- */
+function cell(c) {
+  if (!c) return `<span class="fig none">&mdash;</span>`;
+  if (c.reason === "no data") return `<span class="fig none">no data</span>`;
+  if (c.reason === "bad measurement") return `<span class="fig none">unreliable</span>`;
+  return `<span class="fig ${c.status === "fail" ? "miss" : ""}">${Math.round(c.value)} in</span>`;
+}
+const byName = (b, k) => b.checks.find((c) => c.check === k);
+function listingSays(b) {
+  const said = Object.entries(b.extra || {}).filter(([, r]) => r.status === "listing says").map(([n]) => n);
+  return said.length ? `<span class="said">Listing mentions ${esc(said.join(" and "))}</span>` : "";
+}
+function where(b) {
+  const a = (b.address || "").replace(/,?\s*US$/, "").trim();
+  if (!a || a === "US") return b.city || "";
+  return b.city && !a.toLowerCase().includes(b.city.toLowerCase()) ? `${a}, ${b.city}` : a;
+}
+
+function renderList(t) {
+  rows = t.ranked || [];
+  const n = rows.filter((b) => b.passes).length;
+  $("summary").innerHTML = `<span class="count">${n}</span> of ${rows.length} fit every measured check`;
+  $("notes").innerHTML = t.notes && !t.notes_withheld ? `<p class="notes">${esc(t.notes)}</p>` : "";
+  if (!rows.length) { $("list").innerHTML = `<p class="empty">No scanned homes in this area. Try a wider radius.</p>`; return; }
+  $("list").innerHTML = `<div class="tablebox" tabindex="0" role="region" aria-label="Homes found"><table class="table"><thead><tr><th class="c-thumb"><span class="visually-hidden">Photo</span></th><th>Home</th>
+    <th class="c-hall">Hallway</th><th>Doorway</th><th class="c-turn">Turning</th><th>Verdict</th></tr></thead><tbody>
+    ${rows.map((b, i) => `<tr tabindex="0" data-i="${i}" aria-selected="false">
+      <td class="c-thumb"><img class="thumb" loading="lazy" alt="" src="/api/thumb/${esc(b.recommended_unit || b.sid)}" onerror="this.style.visibility='hidden'"></td>
+      <td><span class="name">${esc(b.name)}</span><span class="addr">${esc(where(b) || `${b.dist_km.toFixed(1)} km away`)}</span>${listingSays(b)}</td>
+      <td class="c-hall">${cell(byName(b, "hallway"))}</td><td>${cell(byName(b, "door"))}</td><td class="c-turn">${cell(byName(b, "turning"))}</td>
+      <td>${b.error ? `<span class="tag tag--out">Not loaded</span>` : b.passes ? `<span class="tag tag--in">Fits</span>` : `<span class="tag tag--out">Doesn't fit</span>`}</td></tr>`).join("")}
+    </tbody></table></div>${rows.length > 5 ? `<p class="scroll-hint">Showing the ${rows.length} buildings that measure best. Scroll the list to see them all.</p>` : ""}`;
+}
+
+function skeleton() {
+  $("list").innerHTML = `<div class="tablebox"><table class="table skel" aria-hidden="true"><tbody>${Array.from({ length: 6 }, () =>
+    `<tr><td class="c-thumb"><div class="tall"></div></td><td><div style="width:60%"></div></td><td class="c-hall"><div></div></td><td><div></div></td><td class="c-turn"><div></div></td><td><div style="width:3rem"></div></td></tr>`).join("")}</tbody></table></div>`;
+}
+
+/* ---------- the detail: floor plan drawn from the scan ---------- */
+function planSvg(floor, doors) {
+  const xs = floor.walls.flatMap((w) => [w[0], w[2]]), ys = floor.walls.flatMap((w) => [w[1], w[3]]);
+  const pad = 0.9, x0 = Math.min(...xs) - pad, x1 = Math.max(...xs) + pad, y0 = Math.min(...ys) - pad, y1 = Math.max(...ys) + pad;
+  const Y = (y) => (y1 - y), W = x1 - x0, H = y1 - y0;
+  const k = Math.max(1, Math.max(W, H) / 12);  // labels and strokes grow with the plan, so a big house stays readable
+  const walls = floor.walls.map((w) => `<line class="wall" stroke-width="${0.11 * k}" x1="${w[0] - x0}" y1="${Y(w[1])}" x2="${w[2] - x0}" y2="${Y(w[3])}"/>`).join("");
+  const marks = doors.filter((d) => d.floor === floor.id).map((d) => {
+    const [[ax, ay], [bx, by]] = d.wall, L = Math.hypot(bx - ax, by - ay) || 1, ux = (bx - ax) / L, uy = (by - ay) / L;
+    const half = d.width_in / 39.37 / 2, cx = d.center[0], cy = d.center[1];
+    const gap = `<line class="gap" stroke-width="${0.2 * k}" x1="${cx - ux * half - x0}" y1="${Y(cy - uy * half)}" x2="${cx + ux * half - x0}" y2="${Y(cy + uy * half)}"/>`;
+    const txt = String(Math.round(d.width_in)), tw = (0.22 + 0.19 * txt.length) * k, th = 0.4 * k, ok = d.status === "pass", st = d.status === "storage";
+    const lbl = `<g class="lbl ${ok ? "in" : st ? "st" : ""}" data-lbl="${d.photo ? esc(d.photo) : ""}" style="--on-w:${0.07 * k}"><rect x="${cx - x0 - tw / 2}" y="${Y(cy) - th / 2}" width="${tw}" height="${th}" rx="${th / 2}" stroke-width="${0.03 * k}"/>
+      <text x="${cx - x0}" y="${Y(cy)}" font-size="${0.27 * k}">${txt}</text></g>`;
+    const label = `Doorway ${Math.round(d.width_in)} inches, ${ok ? "fits" : st ? "closet door, not counted" : d.status === "fail" ? "too narrow" : "unreliable measurement"}`;
+    const j = d.photo ? shots.findIndex((s) => s.photo === d.photo) : -1;
+    return gap + (j >= 0 ? `<a href="#photos" data-shot="${j}" aria-label="${label}, show photo">${lbl}</a>` : `<g role="img" aria-label="${label}">${lbl}</g>`);
+  }).join("");
+  return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(floor.label)} floor plan">${walls}${marks}</svg>`;
+}
+
+async function showDetail(i) {
+  const b = rows[i];
+  document.querySelectorAll(".table tbody tr").forEach((r) => r.setAttribute("aria-selected", r.dataset.i == i ? "true" : "false"));
+  scrollWithin(document.querySelector(".tablebox"), document.querySelector(`.table tbody tr[data-i="${i}"]`), true);
+  const sid = b.recommended_unit || b.sid;
+  const facts = b.checks.map((c) => {
+    const v = c.reason === "measured" ? `${Math.round(c.value)} in` : c.reason === "no data" ? "no data" : "unreliable";
+    const why = c.reason === "no data" ? "The scan has no measurement for this, so it counts as a fail." :
+      c.reason === "bad measurement" ? "The scan's measurement is implausible, so it counts as a fail." :
+      c.status === "pass" ? `Fits: needs ${c.threshold} in.` : `Too small: needs ${c.threshold} in.`;
+    return `<li><span>${NAMES[c.check]}</span><span class="fig ${c.status === "fail" && c.reason === "measured" ? "miss" : ""}">${v}</span><span class="why">${why}${c.note ? " " + esc(c.note) : ""}</span></li>`;
+  }).join("");
+  const said = Object.entries(b.extra || {}).map(([need, r]) => r.status === "listing says" && r.evidence.length
+    ? `<p class="quote">${esc(need)}: <q>${esc(r.evidence[0].context.trim())}</q></p>`
+    : `<p class="quote muted">${esc(need)}: the listing doesn't say.</p>`).join("");
+  $("detail").innerHTML = `<h2>${esc(b.name)}</h2><p class="muted">${esc(where(b) || `${b.dist_km.toFixed(1)} km away`)}</p>
+    ${b.passes ? `<span class="tag tag--in">Fits every measured check</span>` : `<span class="tag tag--out">Doesn't fit</span>`}
+    <a class="scan-link" href="https://my.matterport.com/show/?m=${esc(sid)}" target="_blank" rel="noopener">Open the 3D scan</a>
+    <ul class="facts">${facts}</ul>
+    ${said ? `<h3>What the listing says</h3>${said}` : ""}
+    ${b.building_info ? `<h3>The building</h3><p class="quote">${esc(b.building_info.message)}</p><p class="muted">For information only: stories and elevator never change the verdict or the order.</p>` : ""}
+    <h3>Floor plan</h3><div id="plan"><p class="loading-line">Drawing the floor plan from the scan&hellip;</p></div>`;
+  try {
+    const r = await fetch(`/api/evidence/${sid}`); const ev = await r.json();
+    if (rows[i] !== b || !document.getElementById("plan")) return;
+    if (!r.ok) throw new Error(ev.error);
+    shots = ev.doors.filter((d) => d.photo).sort((a, b) => RANK[a.status] - RANK[b.status]); cur = 0; shotSid = sid;
+    const floors = ev.floors || [], nOut = (f) => ev.doors.filter((d) => d.floor === f.id && RANK[d.status] === 0).length;
+    const tabs = floors.length > 1 ? `<div class="floors" role="tablist" aria-label="Floors">${floors.map((f, j) =>
+      `<button role="tab" data-floor="${esc(f.id)}" aria-selected="${j === 0}">${esc(f.label)}${nOut(f) ? `<span class="n-out">${nOut(f)} narrow</span>` : ""}</button>`).join("")}</div>` : "";
+    $("plan").innerHTML = tabs + floors.map((f, j) => `<figure class="plan" data-plan="${esc(f.id)}" ${j ? "hidden" : ""}>${planSvg(f, ev.doors)}</figure>`).join("")
+      + `<p class="key"><span class="k-in">Fits a wheelchair (32 in or more)</span><span class="k-out">Too narrow or unreliable</span>${ev.doors.some((d) => d.status === "storage") ? `<span class="k-st">Closet door, not counted</span>` : ""}</p>`
+      + `<p class="muted">Each gap in a wall is a doorway, labelled with its width in inches.${shots.length ? " Click a label to see that doorway." : ""}</p>`
+      + (shots.length ? `<h3 id="photos">Doorways</h3><p class="muted">${(() => { const o = shots.filter((d) => RANK[d.status] === 0).length, c = shots.filter((d) => d.status === "storage").length, f = shots.length - o - c, miss = ev.doors.length - shots.length;
+          return (o ? `${o} too narrow, shown first. ${f} fit.` : `All ${f} counted doorways fit.`) + (c ? ` ${c} closet door${c > 1 ? "s" : ""}, not counted.` : "") + (miss ? ` ${miss} more on the plan ${miss > 1 ? "have" : "has"} no photo.` : ""); })()}</p>
+        <figure class="car">
+          <button class="car-open" id="car-open" aria-label="Enlarge photo"><img id="car-img" alt="" src="/evidence/${sid}/${shots[0].photo}"><span class="door-dot" id="car-dot" aria-hidden="true"></span><span class="car-zoom">Click to enlarge</span></button>
+          <div class="car-bar">
+            <button class="arrow" data-step="-1" aria-label="Previous doorway">${CHEV(-1)}</button>
+            <figcaption class="car-cap" id="car-cap"></figcaption>
+            <button class="arrow" data-step="1" aria-label="Next doorway">${CHEV(1)}</button>
+          </div>
+          <div class="dots" id="dots">${shots.map((d, j) => `<button data-shot="${j}" aria-label="Doorway ${j + 1}"></button>`).join("")}</div>
+        </figure>` : "")
+      + `<p class="muted">${esc(ev.note)}</p>`;
+    if (shots.length) showShot(0);
+  } catch (e) {
+    $("plan").innerHTML = `<p class="error">The floor plan couldn't be loaded: ${esc(e.message)}</p>`;
+  }
+}
+
+/* ---------- doorway photos: carousel and enlarged view ---------- */
+function caption(d, j) {
+  const verdict = d.status === "pass" ? "fits (green dot)" : d.status === "storage" ? "closet door, not counted (grey dot)" : d.status === "fail" ? "too narrow (red dot)" : "unreliable measurement (red dot)";
+  return `${Math.round(d.width_in)} in wide, ${verdict} <small>Doorway ${j + 1} of ${shots.length} · seen from ${d.photo_from.distance_m} m away</small>`;
+}
+function showShot(j) {
+  if (!shots.length) return;
+  cur = Math.max(0, Math.min(shots.length - 1, j));
+  const d = shots[cur], src = `/evidence/${shotSid}/${d.photo}`, alt = `Doorway ${Math.round(d.width_in)} inches wide`;
+  const fits = d.status === "pass";
+  if ($("car-img")) { $("car-img").src = src; $("car-img").alt = alt; $("car-cap").innerHTML = caption(d, cur); $("car-dot").classList.toggle("fits", fits); $("car-dot").classList.toggle("skip", d.status === "storage"); }
+  $("lb-pic").innerHTML = `<div class="pic"><img src="${src}" alt="${esc(alt)}"><span class="door-dot ${fits ? "fits" : d.status === "storage" ? "skip" : ""}" aria-hidden="true"></span></div>`;
+  showFloor(d.floor);
+  document.querySelectorAll(".plan .lbl").forEach((g) => g.classList.toggle("on", g.dataset.lbl === d.photo)); $("lb-cap").innerHTML = caption(d, cur);
+  document.querySelectorAll("[data-step]").forEach((b) => { b.disabled = cur + +b.dataset.step < 0 || cur + +b.dataset.step >= shots.length; });
+  document.querySelectorAll("#dots button").forEach((b, k) => b.setAttribute("aria-current", k === cur ? "true" : "false"));
+  shots.forEach((s, k) => { if (Math.abs(k - cur) === 1) new Image().src = `/evidence/${shotSid}/${s.photo}`; });  // preload neighbours
+}
+function scrollWithin(box, el, nearest) {  // scroll a panel, never the page
+  if (!box || !el) return;
+  const top = el.getBoundingClientRect().top - box.getBoundingClientRect().top + box.scrollTop;
+  if (nearest && top >= box.scrollTop && top + el.offsetHeight <= box.scrollTop + box.clientHeight) return;
+  box.scrollTo({ top: nearest ? top - box.clientHeight / 3 : top - 8, behavior: "smooth" });
+}
+function showFloor(id) {
+  if (!document.querySelector(`[data-plan="${id}"]`)) return;
+  document.querySelectorAll("[data-plan]").forEach((f) => { f.hidden = f.dataset.plan !== id; });
+  document.querySelectorAll("[data-floor]").forEach((b) => b.setAttribute("aria-selected", b.dataset.floor === id ? "true" : "false"));
+}
+document.addEventListener("click", (e) => {
+  const tab = e.target.closest("[data-floor]");
+  if (tab) return showFloor(tab.dataset.floor);
+  const step = e.target.closest("[data-step]"), dot = e.target.closest("[data-shot]");
+  if (step) return showShot(cur + +step.dataset.step);
+  if (dot) { e.preventDefault(); showShot(+dot.dataset.shot); if (dot.closest(".plan")) scrollWithin($("detail"), $("photos")); return; }
+  if (e.target.closest("#car-open")) { showShot(cur); $("lb").showModal(); return; }
+  if (e.target.closest("#lb-close") || e.target === $("lb")) $("lb").close();
+});
+document.addEventListener("keydown", (e) => {
+  if (!shots.length || (e.key !== "ArrowLeft" && e.key !== "ArrowRight")) return;
+  if (!$("lb").open && !e.target.closest(".car")) return;
+  e.preventDefault(); showShot(cur + (e.key === "ArrowLeft" ? -1 : 1));
+});
+
+$("list").addEventListener("click", (e) => { const tr = e.target.closest("tr[data-i]"); if (tr) showDetail(+tr.dataset.i); });
+$("list").addEventListener("keydown", (e) => { const tr = e.target.closest("tr[data-i]"); if (tr && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); showDetail(+tr.dataset.i); } });
+
+$("form").onsubmit = async (e) => {
+  e.preventDefault();
+  const p = presets[$("area").value];
+  history.replaceState(null, "", "?" + new URLSearchParams({ area: $("area").value, radius: $("radius").value, agent: $("llm").checked ? "1" : "0", need: $("request").value }));
+  $("go").disabled = true; $("go").textContent = "Measuring…";
+  $("logbox").hidden = false; renderLog([], false); skeleton(); $("summary").textContent = ""; $("notes").innerHTML = "";
+  $("detail").innerHTML = `<p class="muted">Choose a home to see its floor plan, with every doorway measured.</p>`;
+  try {
+    const r = await fetch("/api/search", { method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ request: $("request").value, lat: p.lat, lon: p.lon, radius_km: +$("radius").value, limit: 10, use_llm: $("llm").checked }) });
+    const { job, error } = await r.json();
+    if (!job) throw new Error(error);
+    for (;;) {
+      await new Promise((res) => setTimeout(res, 700));
+      const s = await (await fetch(`/api/job/${job}`)).json();
+      renderLog(s.log, s.status !== "running"); $("elapsed").textContent = `${Math.round(s.elapsed_s)} s`;
+      if (s.status === "done") { renderList(s.result); if (rows.length) showDetail(0); break; }
+      if (s.status === "error") throw new Error(s.error);
+    }
+  } catch (err) {
+    $("list").innerHTML = `<p class="error">The search didn't finish: ${esc(err.message)}. Try again, or turn off the AI agent.</p>`;
+  } finally {
+    $("go").disabled = false; $("go").textContent = "Find homes";
+  }
+};
+init();
+</script>
+</body>
+</html>
